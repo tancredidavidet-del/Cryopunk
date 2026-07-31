@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D Multiplayer Arena 4K</title>
+    <title>3D Multiplayer Arena 4K - Heroes</title>
     <style>
         :root {
             --primary: #00f2fe;
             --accent: #4facfe;
-            --bg-glass: rgba(15, 23, 42, 0.75);
+            --bg-glass: rgba(15, 23, 42, 0.85);
             --border-glass: rgba(255, 255, 255, 0.15);
         }
 
@@ -241,7 +241,7 @@
         <div class="overlay-card">
             <div id="overlay-spinner" class="spinner"></div>
             <div id="overlay-title" class="overlay-title">Accesso alla Stanza...</div>
-            <div id="overlay-desc" class="overlay-desc">Assegnazione dello slot giocatore in corso.</div>
+            <div id="overlay-desc" class="overlay-desc">Assegnazione dello slot personaggio in corso.</div>
             <button id="overlay-btn" class="btn-home hidden" onclick="leaveRoomAndGoHome()">Torna alla Home</button>
         </div>
     </div>
@@ -263,11 +263,11 @@
         const db = firebase.database();
         const ROOM_PATH = "active_sessions/rooms/lobby_1";
 
-        const SLOT_COLORS = {
-            player1: { name: "Player 1", hex: "#ff3366", num: 0xff3366 },
-            player2: { name: "Player 2", hex: "#3399ff", num: 0x3399ff },
-            player3: { name: "Player 3", hex: "#00ffcc", num: 0x00ffcc },
-            player4: { name: "Player 4", hex: "#ffcc00", num: 0xffcc00 }
+        const CHARACTERS = {
+            player1: { name: "Ivan Vostk", role: "Heavy Tactical", hex: "#ff3344", num: 0xff3344, visorColor: 0xffffff, visorEmissive: 0xff1122 },
+            player2: { name: "Dave Crag", role: "Guardian Brawler", hex: "#3388ff", num: 0x3388ff, visorColor: 0x00ffff, visorEmissive: 0x0088ff },
+            player3: { name: "Jonny Dark", role: "Cyber Rogue", hex: "#a855f7", num: 0xa855f7, visorColor: 0xff00ff, visorEmissive: 0xaa00ff },
+            player4: { name: "Kaelen Frost", role: "Recon Specialist", hex: "#00f2fe", num: 0x00f2fe, visorColor: 0xffffff, visorEmissive: 0x00f2fe }
         };
 
         let mySlot = null;
@@ -351,21 +351,57 @@
             requestAnimationFrame(animate);
         }
 
-        function createPlayerMesh(colorHex) {
+        function createPlayerMesh(slot) {
             const group = new THREE.Group();
+            const char = CHARACTERS[slot] || CHARACTERS.player1;
 
             const bodyGeo = new THREE.CapsuleGeometry(0.5, 1.0, 8, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.5 });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: char.num, roughness: 0.3, metalness: 0.6 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 1.0;
             body.castShadow = true;
             group.add(body);
 
-            const visorGeo = new THREE.BoxGeometry(0.6, 0.25, 0.4);
-            const visorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.9, emissive: 0x222222 });
+            const visorGeo = new THREE.BoxGeometry(0.55, 0.22, 0.4);
+            const visorMat = new THREE.MeshStandardMaterial({
+                color: char.visorColor,
+                emissive: char.visorEmissive,
+                emissiveIntensity: 0.8,
+                roughness: 0.1,
+                metalness: 0.9
+            });
             const visor = new THREE.Mesh(visorGeo, visorMat);
             visor.position.set(0, 1.25, 0.35);
             group.add(visor);
+
+            if (slot === 'player1') { // Ivan Vostk
+                const shoulderGeo = new THREE.BoxGeometry(1.4, 0.3, 0.5);
+                const shoulderMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
+                const shoulders = new THREE.Mesh(shoulderGeo, shoulderMat);
+                shoulders.position.set(0, 1.1, 0);
+                shoulders.castShadow = true;
+                group.add(shoulders);
+            } else if (slot === 'player2') { // Dave Crag
+                const chestGeo = new THREE.BoxGeometry(1.1, 0.7, 0.7);
+                const chestMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 });
+                const chest = new THREE.Mesh(chestGeo, chestMat);
+                chest.position.set(0, 0.9, 0.1);
+                chest.castShadow = true;
+                group.add(chest);
+            } else if (slot === 'player3') { // Jonny Dark
+                const cowlGeo = new THREE.ConeGeometry(0.3, 0.5, 4);
+                const cowlMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.5 });
+                const cowl = new THREE.Mesh(cowlGeo, cowlMat);
+                cowl.position.set(0, 1.6, -0.1);
+                cowl.rotation.x = -0.3;
+                group.add(cowl);
+            } else if (slot === 'player4') { // Kaelen Frost
+                const antGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6);
+                const antMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe });
+                const ant = new THREE.Mesh(antGeo, antMat);
+                ant.position.set(0, 1.6, 0);
+                group.add(ant);
+            }
 
             return group;
         }
@@ -499,12 +535,13 @@
             myPlayerRef = db.ref(`${ROOM_PATH}/${mySlot}`);
             myPlayerRef.onDisconnect().remove();
 
-            document.getElementById('slot-dot').style.backgroundColor = SLOT_COLORS[mySlot].hex;
-            document.getElementById('slot-dot').style.boxShadow = `0 0 10px ${SLOT_COLORS[mySlot].hex}`;
-            document.getElementById('player-slot-name').innerText = `${SLOT_COLORS[mySlot].name}`;
+            const hero = CHARACTERS[mySlot];
+            document.getElementById('slot-dot').style.backgroundColor = hero.hex;
+            document.getElementById('slot-dot').style.boxShadow = `0 0 10px ${hero.hex}`;
+            document.getElementById('player-slot-name').innerText = `${hero.name}`;
             document.getElementById('status-overlay').classList.add('hidden');
 
-            localPlayerMesh = createPlayerMesh(SLOT_COLORS[mySlot].num);
+            localPlayerMesh = createPlayerMesh(mySlot);
             localPlayerMesh.position.set(initialData.x, 0, initialData.z);
             scene.add(localPlayerMesh);
 
@@ -539,7 +576,7 @@
         }
 
         function addRemotePlayer(slot, data) {
-            const mesh = createPlayerMesh(SLOT_COLORS[slot].num);
+            const mesh = createPlayerMesh(slot);
             mesh.position.set(data.x, 0, data.z);
             mesh.rotation.y = data.angle || 0;
             scene.add(mesh);
