@@ -3,84 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK: BRAWL EDITION</title>
+    <title>CRYOPUNK: ULTRA-TACTICAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@900&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body { font-family: 'Orbitron', sans-serif; background: #000; margin: 0; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        canvas { display: block; }
         
-        body { font-family: 'Kanit', sans-serif; background: #222; margin: 0; overflow: hidden; }
-        canvas { display: block; position: fixed; inset: 0; z-index: 1; }
-        
-        /* UI Layer */
-        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; }
-        .ui-layer * { pointer-events: auto; }
+        /* UI OVERLAY */
+        .hud-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: flex; flex-direction: column; padding: 20px; }
+        .hud-overlay * { pointer-events: auto; }
+        .panel { background: rgba(0,0,0,0.8); border: 1px solid #0f0; border-radius: 4px; padding: 10px; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
 
-        /* HUD Stile Brawl */
-        .brawl-bar { background: rgba(0,0,0,0.5); border: 4px solid #000; border-radius: 12px; overflow: hidden; height: 24px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
-        .hp-fill { background: #4ef037; height: 100%; transition: width 0.3s; }
-        .pa-badge { background: #ffce00; border: 4px solid #000; color: #000; text-shadow: none; }
+        /* SELEZIONE */
+        .selection-screen { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .card { width: 300px; padding: 20px; border: 1px solid #333; margin: 10px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .card:hover { border-color: #0f0; background: rgba(0,255,0,0.1); }
+        .card.occupied { opacity: 0.3; pointer-events: none; border-color: #f00; }
 
-        /* Schermata Selezione */
-        .selection-screen { position: fixed; inset: 0; z-index: 500; background: #3b82f6; display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; }
-        .char-card { background: #fff; border: 6px solid #000; border-radius: 20px; transition: 0.2s; cursor: pointer; width: 100%; max-width: 300px; margin-bottom: 15px; padding: 15px; display: flex; align-items: center; gap: 15px; }
-        .char-card.occupied { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
-        .char-card:active { transform: translateY(4px); }
+        /* CONTROLLI FLUIDI */
+        .controls { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
+        .btn-ctrl { width: 70px; height: 70px; background: rgba(255,255,255,0.1); border: 2px solid #fff; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; touch-action: none; }
+        .btn-ctrl.active { background: #0f0; border-color: #0f0; color: #000; }
 
-        /* Controlli Movimento */
-        .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; }
-        .ctrl-btn { width: 55px; height: 55px; background: #fff; border: 4px solid #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 6px 0 #888; }
-        .ctrl-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #888; }
-        
-        .action-btns { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; }
-        .action-btn { background: #ff4747; color: white; border: 4px solid #000; padding: 15px 30px; border-radius: 50px; font-weight: 900; box-shadow: 0 6px 0 #b32d2d; }
+        .btn-action { position: fixed; bottom: 30px; right: 30px; width: 100px; height: 100px; background: #f00; border: 4px solid #000; border-radius: 50%; color: #fff; font-weight: 900; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
     </style>
 </head>
 <body>
 
     <div id="selection-screen" class="selection-screen">
-        <h1 class="text-white text-5xl font-black italic mb-8 uppercase tracking-tighter" style="-webkit-text-stroke: 3px #000;">SCEGLI EROE</h1>
-        <div id="char-grid" class="w-full flex flex-col items-center"></div>
+        <h1 class="text-white text-4xl font-black mb-10 tracking-[0.5em] uppercase">Cryopunk: 60FPS</h1>
+        <div id="char-grid"></div>
     </div>
 
-    <div id="game-ui" class="ui-layer hidden">
-        <!-- TOP HUD -->
-        <div class="p-4 flex justify-between items-start">
-            <div class="w-1/2">
-                <div id="char-name" class="text-white text-xl italic uppercase mb-1" style="-webkit-text-stroke: 1px #000;">---</div>
-                <div class="brawl-bar w-full">
-                    <div id="hp-fill" class="hp-fill" style="width: 100%"></div>
-                </div>
+    <div id="game-hud" class="hud-overlay hidden">
+        <div class="flex justify-between">
+            <div class="panel">
+                <div id="p-name" class="text-emerald-400 font-bold text-xs">UNIT: ---</div>
+                <div class="w-48 h-1.5 bg-neutral-900 mt-2"><div id="hp-bar" class="h-full bg-emerald-500 transition-all" style="width:100%"></div></div>
             </div>
-            <div class="pa-badge px-4 py-1 rounded-xl flex flex-col items-center">
-                <span class="text-[10px] font-black uppercase">Energia</span>
-                <span id="pa-display" class="text-3xl font-black">4</span>
+            <div class="panel text-center">
+                <div class="text-[8px] text-emerald-500 font-bold uppercase">FPS</div>
+                <div id="fps-counter" class="text-xl font-black text-white">60</div>
             </div>
         </div>
 
-        <!-- MOVIMENTO (D-PAD) -->
-        <div class="d-pad">
-            <div></div>
-            <button class="ctrl-btn" onclick="muoviti('avanti')">▲</button>
-            <div></div>
-            <button class="ctrl-btn" onclick="ruota('sinistra')">◀</button>
-            <button class="ctrl-btn" onclick="muoviti('indietro')">▼</button>
-            <button class="ctrl-btn" onclick="ruota('destra')">▶</button>
+        <!-- D-PAD FLUIDO -->
+        <div class="controls">
+            <div></div><button class="btn-ctrl" id="up">▲</button><div></div>
+            <button class="btn-ctrl" id="left">◀</button>
+            <button class="btn-ctrl" id="down">▼</button>
+            <button class="btn-ctrl" id="right">▶</button>
         </div>
 
-        <!-- AZIONI -->
-        <div class="action-btns">
-            <button class="action-btn" onclick="fruga()">🔍 SCAN</button>
-            <button class="action-btn bg-yellow-400 !border-yellow-900 !text-black !box-shadow-none" style="box-shadow: 0 6px 0 #a18600;" onclick="passaTurno()">FINE TURNO</button>
-        </div>
-        
-        <div id="log" class="fixed top-24 left-4 right-4 h-12 overflow-hidden text-white text-[10px] uppercase font-bold italic pointer-events-none opacity-80"></div>
+        <button class="btn-action" onclick="attacca()">FIRE</button>
     </div>
 
     <script>
-        // CONFIG FIREBASE (Sostituisci con la tua chiave)
+        // CONFIGURAZIONE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDzCp1PWbf82SfvhpZyXViK0Klf8rgDOcc",
             databaseURL: "https://cryopunk-90f36-default-rtdb.europe-west1.firebasedatabase.app/",
@@ -89,112 +72,160 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const TEAM_DATA = {
-            dave: { n: "DAVE-RIG", color: "#fbbf24", hair: 0x000000, body: "normal", catch: "Interessante." },
-            jonny: { n: "JONNY DARK", color: "#bc6ff1", hair: 0x000000, body: "slim", catch: "Pessimo." },
-            ivan: { n: "IVAN-VOSTOK", color: "#ff2e63", hair: 0x5d4037, body: "massive", catch: "Si... farai carriera." },
-            sara: { n: "SARA-MED", color: "#10b981", hair: 0x333333, body: "normal", catch: "Analisi terminata." },
-            axel: { n: "AXEL-01", color: "#00d4ff", hair: 0xcccccc, body: "android", catch: "Efficienza 100%." }
+        const TEAM = {
+            dave: { n: "DAVE-RIG", h: 4.2, w: 1.0, color: 0xcccccc, hair: 0x000000, desc: "Alto, Capelli Neri" },
+            ivan: { n: "IVAN-VOSTOK", h: 3.6, w: 2.2, color: 0x444444, hair: 0x5d4037, desc: "Massiccio, Capelli Marroni" },
+            jonny: { n: "JONNY DARK", h: 3.8, w: 1.1, color: 0x222222, hair: 0x000000, desc: "Hacker, Agile" }
         };
 
         let myId = null;
         let gameState = {};
         let scene, camera, renderer, charMeshes = {};
-        let pa = 4;
+        let input = { up: false, down: false, left: false, right: false };
+        let clock = new THREE.Clock();
 
-        // INIZIALIZZAZIONE 3D (Risoluzione Maggiore e Luce)
+        // --- 3D ENGINE HIGH-END ---
         function init3D() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x555555);
+            scene.background = new THREE.Color(0x020202);
+            scene.fog = new THREE.Fog(0x020202, 10, 80);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
             
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio); // Alta risoluzione
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             document.body.appendChild(renderer.domElement);
 
-            // Luci Brawl Style (Forti)
-            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-            sun.position.set(10, 20, 10);
+            // Luci Realistiche
+            const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0x00ffaa, 1.5);
+            sun.position.set(20, 50, 20);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 2048;
+            sun.shadow.mapSize.height = 2048;
             scene.add(sun);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-            // Griglia Pavimento chiara
-            const grid = new THREE.GridHelper(200, 40, 0x000000, 0x888888);
-            scene.add(grid);
+            // Pavimento Realistico
+            const floorGeo = new THREE.PlaneGeometry(200, 200);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI/2;
+            floor.receiveShadow = true;
+            scene.add(floor);
 
-            // Creazione Eroi Grandi
-            Object.keys(TEAM_DATA).forEach(id => {
-                const char = TEAM_DATA[id];
+            // Creazione Personaggi Realistici
+            Object.keys(TEAM).forEach(id => {
+                const data = TEAM[id];
                 const group = new THREE.Group();
                 
-                // Corpo (Scalato 2.5x per stile Brawl)
-                const bodyGeo = (id==='ivan') ? new THREE.BoxGeometry(3, 4, 2) : new THREE.BoxGeometry(2, 5, 1.5);
-                const body = new THREE.Mesh(bodyGeo, new THREE.MeshPhongMaterial({color: char.color}));
-                body.position.y = 2.5; 
-                group.add(body);
+                // Busto (Capsula)
+                const torsoGeo = new THREE.CapsuleGeometry(data.w * 0.4, data.h * 0.5, 4, 8);
+                const torsoMat = new THREE.MeshStandardMaterial({color: data.color, metalness: 0.7, roughness: 0.3});
+                const torso = new THREE.Mesh(torsoGeo, torsoMat);
+                torso.position.y = data.h * 0.6;
+                torso.castShadow = true;
+                group.add(torso);
 
-                // Testa grande
-                const head = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshPhongMaterial({color: 0xffdbac}));
-                head.position.y = 5.5; 
+                // Testa
+                const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+                const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({color: 0xffdbac}));
+                head.position.y = data.h * 1.1;
                 group.add(head);
 
-                // Capelli Dave/Ivan
-                const hair = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 2), new THREE.MeshBasicMaterial({color: char.hair}));
-                hair.position.y = 6.2;
+                // Capelli
+                const hairGeo = new THREE.BoxGeometry(0.5, 0.2, 0.5);
+                const hair = new THREE.Mesh(hairGeo, new THREE.MeshBasicMaterial({color: data.hair}));
+                hair.position.y = data.h * 1.25;
                 if(id === 'ivan') hair.rotation.z = 0.5;
                 group.add(hair);
 
                 scene.add(group);
                 charMeshes[id] = group;
-                
-                // Posizione iniziale
-                group.position.set(Math.random()*10 - 5, 0, Math.random()*10 - 5);
+                group.position.set(Math.random()*10, 0, Math.random()*10);
             });
 
-            animate();
+            setupInputHandlers();
+            loop();
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
+        function setupInputHandlers() {
+            const bind = (id, key) => {
+                const el = document.getElementById(id);
+                const start = (e) => { e.preventDefault(); input[key] = true; el.classList.add('active'); };
+                const stop = (e) => { e.preventDefault(); input[key] = false; el.classList.remove('active'); };
+                el.addEventListener('mousedown', start); el.addEventListener('mouseup', stop);
+                el.addEventListener('touchstart', start); el.addEventListener('touchend', stop);
+            };
+            bind('up', 'up'); bind('down', 'down'); bind('left', 'left'); bind('right', 'right');
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            const delta = clock.getDelta();
+
             if (myId && charMeshes[myId]) {
-                const target = charMeshes[myId].position;
-                // Camera Isometrica (Stile Brawl)
-                camera.position.set(target.x, target.y + 25, target.z + 25);
-                camera.lookAt(target.x, target.y, target.z);
+                const mesh = charMeshes[myId];
+                const speed = 15 * delta;
+                const rotSpeed = 3 * delta;
+
+                if (input.up) mesh.translateZ(-speed);
+                if (input.down) mesh.translateZ(speed);
+                if (input.left) mesh.rotation.y += rotSpeed;
+                if (input.right) mesh.rotation.y -= rotSpeed;
+
+                // Sync continuo su Firebase (ogni frame è troppo, facciamo un campionamento)
+                if (clock.elapsedTime % 0.05 < 0.02) {
+                    updateDB();
+                }
+
+                // Camera Smooth
+                const idealPos = new THREE.Vector3(0, 10, 15).applyQuaternion(mesh.quaternion).add(mesh.position);
+                camera.position.lerp(idealPos, 0.1);
+                camera.lookAt(mesh.position.x, 2, mesh.position.z);
             }
+
+            // Interpolazione altri giocatori
+            Object.keys(gameState.players || {}).forEach(id => {
+                if(id !== myId && charMeshes[id]) {
+                    const p = gameState.players[id];
+                    charMeshes[id].position.lerp(new THREE.Vector3(p.x, 0, p.z), 0.1);
+                    charMeshes[id].rotation.y = p.r;
+                }
+            });
+
             renderer.render(scene, camera);
         }
 
-        // SINCRONIZZAZIONE FIREBASE
+        // --- FIREBASE SYNC ---
         db.ref('game').on('value', (snap) => {
             gameState = snap.val();
             if (!gameState) initServer();
             else {
                 if (!myId) updateSelectionUI();
-                else syncPlayers();
             }
         });
 
         function initServer() {
-            const initial = { players: {} };
-            Object.keys(TEAM_DATA).forEach(k => {
-                initial.players[k] = { x: 0, z: 0, rot: 0, h: 100, s: 'LIBERO' };
-            });
-            db.ref('game').set(initial);
+            const players = {};
+            Object.keys(TEAM).forEach(k => players[k] = {x:0, z:0, r:0, s:'LIBERO', h:100});
+            db.ref('game').set({ players });
         }
 
         function updateSelectionUI() {
             const grid = document.getElementById('char-grid');
-            grid.innerHTML = Object.keys(TEAM_DATA).map(key => {
+            grid.innerHTML = Object.keys(TEAM).map(key => {
                 const occupied = gameState.players[key].s !== 'LIBERO';
                 return `
-                    <div class="char-card ${occupied ? 'occupied' : ''}" onclick="pick('${key}')">
-                        <div class="w-12 h-12 rounded-full" style="background:${TEAM_DATA[key].color}"></div>
-                        <div class="flex-1">
-                            <div class="font-black text-lg uppercase">${TEAM_DATA[key].n}</div>
-                            <div class="text-xs text-blue-600 font-bold uppercase">${occupied ? 'In Partita' : 'Disponibile'}</div>
-                        </div>
+                    <div class="card ${occupied ? 'occupied' : ''}" onclick="pick('${key}')">
+                        <div class="text-white font-black text-xl">${TEAM[key].n}</div>
+                        <div class="text-emerald-500 text-[10px] mt-1 uppercase">${TEAM[key].desc}</div>
+                        <div class="text-[9px] mt-2 ${occupied ? 'text-red-500' : 'text-emerald-500'}">${occupied ? 'ONLINE' : 'SVEGLIA'}</div>
                     </div>
                 `;
             }).join('');
@@ -202,71 +233,27 @@
 
         function pick(id) {
             myId = id;
-            db.ref(`game/players/${id}/s`).set('OCCUPATO');
+            const ref = db.ref(`game/players/${id}`);
+            ref.update({ s: 'OCCUPATO' });
+            ref.onDisconnect().update({ s: 'LIBERO' });
+
             document.getElementById('selection-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('char-name').innerText = TEAM_DATA[id].n;
+            document.getElementById('game-hud').style.display = 'block';
+            document.getElementById('p-name').innerText = "UNIT: " + TEAM[id].n;
             init3D();
         }
 
-        function syncPlayers() {
-            Object.keys(gameState.players).forEach(id => {
-                const p = gameState.players[id];
-                if(charMeshes[id]) {
-                    charMeshes[id].position.x = p.x;
-                    charMeshes[id].position.z = p.z;
-                    charMeshes[id].rotation.y = p.rot;
-                }
-            });
-            document.getElementById('hp-fill').style.width = gameState.players[myId].h + "%";
-        }
-
-        // MOVIMENTO MANUALE (1 PA per azione)
-        function muoviti(direzione) {
-            if(pa < 0.1) return;
-            const mesh = charMeshes[myId];
-            const step = 4; // Passo lungo stile brawl
-            
-            if(direzione === 'avanti') {
-                mesh.translateZ(-step);
-            } else {
-                mesh.translateZ(step);
-            }
-            
-            pa -= 0.5; // Ogni passo consuma mezzo PA
-            updateDatabase();
-        }
-
-        function ruota(dir) {
-            const mesh = charMeshes[myId];
-            if(dir === 'sinistra') mesh.rotation.y += 0.5;
-            else mesh.rotation.y -= 0.5;
-            updateDatabase();
-        }
-
-        function updateDatabase() {
-            document.getElementById('pa-display').innerText = Math.floor(pa);
+        function updateDB() {
             db.ref(`game/players/${myId}`).update({
                 x: charMeshes[myId].position.x,
                 z: charMeshes[myId].position.z,
-                rot: charMeshes[myId].rotation.y
+                r: charMeshes[myId].rotation.y
             });
         }
 
-        function passaTurno() {
-            pa = 4;
-            document.getElementById('pa-display').innerText = pa;
-            // Mostra frasi tipiche Ivan/Jonny nel log rapido
-            const msg = (myId === 'ivan') ? TEAM_DATA.ivan.catch : (myId === 'jonny' ? TEAM_DATA.jonny.catch : "Turno concluso.");
-            document.getElementById('log').innerHTML = `> ${TEAM_DATA[myId].n}: "${msg}"`;
-            setTimeout(() => document.getElementById('log').innerHTML = "", 3000);
-        }
-
-        function fruga() {
-            if(pa < 1) return;
-            pa--;
-            document.getElementById('pa-display').innerText = pa;
-            if(myId === 'dave') document.getElementById('log').innerHTML = `> DAVE-RIG: "Interessante..."`;
+        function attacca() {
+            if(window.navigator.vibrate) window.navigator.vibrate(50);
+            console.log("FIRE");
         }
 
         window.onresize = () => {
