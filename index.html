@@ -2,14 +2,25 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D Multiplayer Arena 4K - Heroes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CRYOPUNK ONLINE: GOLGOTHA-IV 4K</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
         :root {
-            --primary: #00f2fe;
-            --accent: #4facfe;
-            --bg-glass: rgba(15, 23, 42, 0.85);
-            --border-glass: rgba(255, 255, 255, 0.15);
+            --primary: #bc6ff1;
+            --accent: #00d4ff;
+            --bg-glass: rgba(10, 5, 25, 0.85);
+            --border-glass: rgba(188, 111, 241, 0.25);
         }
 
         * {
@@ -19,101 +30,104 @@
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Share Tech Mono', monospace;
         }
 
         body, html {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #050508;
-            color: #ffffff;
+            background-color: #050208;
+            color: #e5e5e5;
         }
 
         #game-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: fixed;
+            inset: 0;
             width: 100%;
             height: 100%;
             z-index: 1;
         }
 
-        #hud-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .ui-layer {
+            position: relative;
             z-index: 10;
             pointer-events: none;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 16px) env(safe-area-inset-left, 16px);
         }
 
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            padding: 12px 18px;
+        .ui-layer * {
+            pointer-events: auto;
+        }
+
+        .cyber-panel {
             background: var(--bg-glass);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 18px 18px 0;
             border: 1px solid var(--border-glass);
-            border-radius: 16px;
-            pointer-events: auto;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .player-badge {
+        .selection-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: #050208;
             display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            letter-spacing: 0.5px;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
         }
 
-        .slot-indicator {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            box-shadow: 0 0 10px currentColor;
+        .char-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(15, 10, 30, 0.6);
+            cursor: pointer;
         }
 
-        .room-info {
-            font-size: 0.85rem;
-            opacity: 0.8;
+        .char-card.occupied {
+            opacity: 0.35;
+            filter: grayscale(0.8);
+            pointer-events: none;
+            border-color: rgba(255, 0, 0, 0.2);
+        }
+
+        .char-card:not(.occupied):hover, .char-card:not(.occupied):active {
+            border-color: var(--primary);
+            background: rgba(188, 111, 241, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-home {
+            background: linear-gradient(135deg, #ff2e63 0%, #ff4b2b 100%);
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            font-weight: 900;
+            font-size: 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 46, 99, 0.4);
+            transition: all 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        .btn-home {
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-            color: #ffffff;
-            border: none;
-            padding: 10px 20px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
-            transition: all 0.2s ease;
-            pointer-events: auto;
-        }
-
         .btn-home:active {
             transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(255, 65, 108, 0.6);
         }
 
         .controls-layer {
             position: relative;
             width: 100%;
-            height: 200px;
+            height: 180px;
             pointer-events: none;
         }
 
@@ -123,8 +137,8 @@
             left: 20px;
             width: 130px;
             height: 130px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(188, 111, 241, 0.3);
             border-radius: 50%;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -147,47 +161,18 @@
         }
 
         #status-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(5, 5, 8, 0.92);
+            position: fixed;
+            inset: 0;
+            z-index: 600;
+            background: rgba(5, 2, 8, 0.94);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 24px;
             text-align: center;
-        }
-
-        .overlay-card {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
-            border-radius: 24px;
-            padding: 36px 28px;
-            max-width: 380px;
-            width: 100%;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .overlay-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 12px;
-            background: linear-gradient(90deg, #00f2fe, #4facfe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .overlay-desc {
-            font-size: 0.95rem;
-            color: #a0aec0;
-            margin-bottom: 24px;
-            line-height: 1.5;
         }
 
         .spinner {
@@ -209,40 +194,63 @@
             display: none !important;
         }
     </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
     <canvas id="game-canvas"></canvas>
 
-    <div id="hud-container">
-        <div class="top-bar">
-            <div class="player-badge">
-                <div id="slot-dot" class="slot-indicator" style="background-color: #777;"></div>
-                <span id="player-slot-name">Connessione...</span>
-            </div>
-            <div class="room-info">Lobby 1 (<span id="online-count">0</span>/4)</div>
-            <button class="btn-home" onclick="leaveRoomAndGoHome()">Home</button>
-        </div>
-
-        <div class="controls-layer">
-            <div id="joystick-zone">
-                <div id="joystick-knob"></div>
-            </div>
+    <div id="selection-screen" class="selection-screen">
+        <h1 class="text-purple-400 text-3xl font-black italic mb-1 tracking-tight">CRYOPUNK MULTIPLAYER</h1>
+        <p class="text-neutral-500 text-[10px] mb-6 uppercase tracking-[0.3em]">Connessione Golgotha-IV Lobby 1...</p>
+        <div id="char-grid" class="grid grid-cols-1 gap-3 max-w-md w-full mx-auto">
         </div>
     </div>
 
-    <div id="status-overlay">
-        <div class="overlay-card">
+    <div id="game-ui" class="ui-layer hidden">
+        <header class="flex justify-between items-center bg-neutral-900/90 p-4 rounded-2xl border border-white/10 mb-2">
+            <div class="flex items-center gap-3">
+                <div id="slot-dot" class="w-3 height-3 rounded-full"></div>
+                <div>
+                    <div id="my-tag" class="text-xs font-black text-purple-400 uppercase italic">---</div>
+                    <div class="text-[8px] text-neutral-400 uppercase tracking-widest">Lobby 1 (<span id="online-count">0</span>/4 ONLINE)</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <span id="pa-display" class="text-3xl font-black text-amber-500 leading-none">4</span>
+                    <span class="text-[7px] text-neutral-500 block font-bold uppercase">Energy Units</span>
+                </div>
+                <button class="btn-home" onclick="leaveRoomAndGoHome()">Home</button>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col justify-end space-y-3">
+            <div id="hazard-alert" class="bg-red-600/90 text-white text-center py-1 text-[9px] font-black tracking-widest hidden rounded-lg">RILEVAZIONE ALIENARE NELLA STANZA</div>
+            <section class="cyber-panel p-4">
+                <h2 id="room-name" class="text-sm font-black text-white uppercase tracking-tighter mb-1">Cripta Criogenica</h2>
+                <p id="room-desc" class="text-[9px] text-neutral-400 italic mb-3">Settore di stasi Golgotha-IV</p>
+                <div id="actions" class="grid grid-cols-2 gap-2">
+                    <button onclick="fruga()" class="bg-white/5 border border-white/10 py-2.5 rounded-lg text-[9px] font-black uppercase hover:bg-white/10 transition">🔍 Analisi</button>
+                    <button onclick="attacca()" id="btn-atk" class="bg-red-900/40 border border-red-500 text-red-500 py-2.5 rounded-lg text-[9px] font-black hidden uppercase">⚔️ Respingi</button>
+                </div>
+            </section>
+            
+            <div id="log" class="h-20 bg-black/80 rounded-xl p-3 overflow-y-auto text-[8px] font-mono border border-white/5 space-y-1"></div>
+
+            <div class="controls-layer">
+                <div id="joystick-zone">
+                    <div id="joystick-knob"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="status-overlay" class="hidden">
+        <div class="bg-neutral-900/90 border border-purple-500/30 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
             <div id="overlay-spinner" class="spinner"></div>
-            <div id="overlay-title" class="overlay-title">Accesso alla Stanza...</div>
-            <div id="overlay-desc" class="overlay-desc">Assegnazione dello slot personaggio in corso.</div>
-            <button id="overlay-btn" class="btn-home hidden" onclick="leaveRoomAndGoHome()">Torna alla Home</button>
+            <div id="overlay-title" class="text-xl font-black text-purple-400 mb-2">Accesso in corso...</div>
+            <div id="overlay-desc" class="text-xs text-neutral-400 mb-6">Sincronizzazione slot multiplayer.</div>
+            <button id="overlay-btn" class="btn-home hidden w-full py-3" onclick="leaveRoomAndGoHome()">Torna alla Home</button>
         </div>
     </div>
 
@@ -263,16 +271,26 @@
         const db = firebase.database();
         const ROOM_PATH = "active_sessions/rooms/lobby_1";
 
-        const CHARACTERS = {
-            player1: { name: "Ivan Vostk", role: "Heavy Tactical", hex: "#ff3344", num: 0xff3344, visorColor: 0xffffff, visorEmissive: 0xff1122 },
-            player2: { name: "Dave Crag", role: "Guardian Brawler", hex: "#3388ff", num: 0x3388ff, visorColor: 0x00ffff, visorEmissive: 0x0088ff },
-            player3: { name: "Jonny Dark", role: "Cyber Rogue", hex: "#a855f7", num: 0xa855f7, visorColor: 0xff00ff, visorEmissive: 0xaa00ff },
-            player4: { name: "Kaelen Frost", role: "Recon Specialist", hex: "#00f2fe", num: 0x00f2fe, visorColor: 0xffffff, visorEmissive: 0x00f2fe }
+        const TEAM_DATA = {
+            ivan: { n: "IVAN-VOSTOK", role: "Soldato Tattico", color: "#ff2e63", num: 0xff2e63, catch: "Sì... tu farai carriera.", slot: "player1" },
+            dave: { n: "DAVE-RIG", role: "Ingegnere", color: "#fbbf24", num: 0xfbbf24, catch: "Interessante.", slot: "player2" },
+            jonny: { n: "JONNY DARK", role: "Hacker Cyber", color: "#bc6ff1", num: 0xbc6ff1, catch: "Pessimo.", slot: "player3" },
+            sara: { n: "SARA-MED", role: "Biologa", color: "#10b981", num: 0x10b981, catch: "Bioma ostile.", slot: "player4" }
         };
 
+        const SLOT_TO_CHAR = {
+            player1: "ivan",
+            player2: "dave",
+            player3: "jonny",
+            player4: "sara"
+        };
+
+        let myId = null;
         let mySlot = null;
         let myPlayerRef = null;
         let myClientId = 'cli_' + Math.random().toString(36).substr(2, 9);
+        let roomState = {};
+
         let scene, camera, renderer, controls;
         let localPlayerMesh = null;
         const remotePlayers = {};
@@ -284,11 +302,123 @@
         let joystickActive = false;
         let touchId = null;
 
-        function initThreeJS() {
+        function listenToRoom() {
+            const roomRef = db.ref(ROOM_PATH);
+            roomRef.on('value', (snapshot) => {
+                roomState = snapshot.val() || {};
+                updateCharacterSelectionScreen();
+                syncRoomUI();
+            });
+        }
+
+        function updateCharacterSelectionScreen() {
+            const grid = document.getElementById('char-grid');
+            const activeCount = Object.keys(roomState).length;
+
+            grid.innerHTML = Object.keys(TEAM_DATA).map(charKey => {
+                const char = TEAM_DATA[charKey];
+                const slotData = roomState[char.slot];
+                const occupied = !!slotData;
+
+                return `
+                    <div class="char-card p-4 rounded-xl flex justify-between items-center ${occupied ? 'occupied' : ''}" onclick="selectCharacter('${charKey}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3.5 h-3.5 rounded-full" style="background-color: ${char.color}; box-shadow: 0 0 8px ${char.color}"></div>
+                            <div>
+                                <div class="text-white font-bold text-sm tracking-wide">${char.n}</div>
+                                <div class="text-[9px] text-neutral-400">${char.role}</div>
+                            </div>
+                        </div>
+                        <div class="text-[9px] font-black ${occupied ? 'text-red-500' : 'text-emerald-400'}">
+                            ${occupied ? 'IN USO' : 'SELEZIONA'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectCharacter(charKey) {
+            const targetChar = TEAM_DATA[charKey];
+            const targetSlot = targetChar.slot;
+
+            const roomRef = db.ref(ROOM_PATH);
+
+            roomRef.transaction((data) => {
+                if (data === null) data = {};
+                if (data[targetSlot]) {
+                    return;
+                }
+                data[targetSlot] = {
+                    token: myClientId,
+                    charKey: charKey,
+                    x: (Math.random() - 0.5) * 8,
+                    z: (Math.random() - 0.5) * 8,
+                    angle: 0,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                return data;
+            }, (error, committed, snapshot) => {
+                if (error || !committed) {
+                    showOverlayError("Slot Occupato", "Il personaggio selezionato è già stato preso da un altro giocatore.");
+                    return;
+                }
+
+                myId = charKey;
+                mySlot = targetSlot;
+                myPlayerRef = db.ref(`${ROOM_PATH}/${mySlot}`);
+                myPlayerRef.onDisconnect().remove();
+
+                document.getElementById('selection-screen').style.display = 'none';
+                document.getElementById('game-ui').classList.remove('hidden');
+                document.getElementById('my-tag').innerText = targetChar.n;
+                document.getElementById('slot-dot').style.backgroundColor = targetChar.color;
+
+                loggar(targetChar.catch, charKey);
+                init3D();
+            });
+        }
+
+        function syncRoomUI() {
+            const activeCount = Object.keys(roomState).length;
+            const onlineCountEl = document.getElementById('online-count');
+            if (onlineCountEl) onlineCountEl.innerText = activeCount;
+
+            if (mySlot && scene) {
+                const slots = ["player1", "player2", "player3", "player4"];
+                slots.forEach(s => {
+                    if (s !== mySlot) {
+                        if (roomState[s]) {
+                            if (!remotePlayers[s]) {
+                                addRemotePlayer(s, roomState[s]);
+                            } else {
+                                updateRemotePlayer(s, roomState[s]);
+                            }
+                        } else if (remotePlayers[s]) {
+                            removeRemotePlayer(s);
+                        }
+                    }
+                });
+            }
+        }
+
+        async function leaveRoomAndGoHome() {
+            if (myPlayerRef) {
+                await myPlayerRef.remove();
+            }
+            window.location.href = 'index_home.html';
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (myPlayerRef) {
+                myPlayerRef.remove();
+            }
+        });
+
+        function init3D() {
             const canvas = document.getElementById('game-canvas');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0c14);
-            scene.fog = new THREE.FogExp2(0x0a0c14, 0.02);
+            scene.background = new THREE.Color(0x050208);
+            scene.fog = new THREE.FogExp2(0x050208, 0.025);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 8, 14);
@@ -299,61 +429,58 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            const ambient = new THREE.AmbientLight(0x201535, 0.8);
+            scene.add(ambient);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
+            const dirLight = new THREE.DirectionalLight(0xbc6ff1, 0.9);
+            dirLight.position.set(20, 35, 20);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048;
             dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.near = 0.5;
-            dirLight.shadow.camera.far = 100;
-            const d = 25;
-            dirLight.shadow.camera.left = -d;
-            dirLight.shadow.camera.right = d;
-            dirLight.shadow.camera.top = d;
-            dirLight.shadow.camera.bottom = -d;
             scene.add(dirLight);
 
             const floorGeo = new THREE.PlaneGeometry(60, 60);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x121624, roughness: 0.4, metalness: 0.2 });
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0518, roughness: 0.3, metalness: 0.3 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             scene.add(floor);
 
-            const grid = new THREE.GridHelper(60, 30, 0x00f2fe, 0x1f293d);
+            const grid = new THREE.GridHelper(60, 30, 0xbc6ff1, 0x1f1035);
             grid.position.y = 0.01;
             scene.add(grid);
 
-            const boxGeo = new THREE.BoxGeometry(2, 4, 2);
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
-            const positions = [[-8, -8], [8, 8], [-8, 8], [8, -8]];
-            positions.forEach(pos => {
-                const obstacle = new THREE.Mesh(boxGeo, boxMat);
-                obstacle.position.set(pos[0], 2, pos[1]);
-                obstacle.castShadow = true;
-                obstacle.receiveShadow = true;
-                scene.add(obstacle);
+            const pillarGeo = new THREE.CylinderGeometry(1.2, 1.2, 5, 12);
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x120a2a, roughness: 0.2, metalness: 0.8 });
+            [[-10, -10], [10, 10], [-10, 10], [10, -10]].forEach(pos => {
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.set(pos[0], 2.5, pos[1]);
+                pillar.castShadow = true;
+                scene.add(pillar);
             });
+
+            const initialPos = roomState[mySlot] || { x: 0, z: 0 };
+            localPlayerMesh = createCharacterMesh(myId);
+            localPlayerMesh.position.set(initialPos.x, 0, initialPos.z);
+            scene.add(localPlayerMesh);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enablePan = false;
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             controls.maxPolarAngle = Math.PI / 2 - 0.05;
-            controls.minDistance = 6;
+            controls.minDistance = 5;
             controls.maxDistance = 22;
+            controls.target.copy(localPlayerMesh.position);
 
             window.addEventListener('resize', onWindowResize);
             setupJoystick();
             requestAnimationFrame(animate);
         }
 
-        function createPlayerMesh(slot) {
+        function createCharacterMesh(charKey) {
             const group = new THREE.Group();
-            const char = CHARACTERS[slot] || CHARACTERS.player1;
+            const char = TEAM_DATA[charKey] || TEAM_DATA.ivan;
 
             const bodyGeo = new THREE.CapsuleGeometry(0.5, 1.0, 8, 16);
             const bodyMat = new THREE.MeshStandardMaterial({ color: char.num, roughness: 0.3, metalness: 0.6 });
@@ -363,47 +490,68 @@
             group.add(body);
 
             const visorGeo = new THREE.BoxGeometry(0.55, 0.22, 0.4);
-            const visorMat = new THREE.MeshStandardMaterial({
-                color: char.visorColor,
-                emissive: char.visorEmissive,
-                emissiveIntensity: 0.8,
-                roughness: 0.1,
-                metalness: 0.9
-            });
+            const visorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: char.num, emissiveIntensity: 0.9 });
             const visor = new THREE.Mesh(visorGeo, visorMat);
             visor.position.set(0, 1.25, 0.35);
             group.add(visor);
 
-            if (slot === 'player1') { // Ivan Vostk
-                const shoulderGeo = new THREE.BoxGeometry(1.4, 0.3, 0.5);
-                const shoulderMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
-                const shoulders = new THREE.Mesh(shoulderGeo, shoulderMat);
-                shoulders.position.set(0, 1.1, 0);
-                shoulders.castShadow = true;
-                group.add(shoulders);
-            } else if (slot === 'player2') { // Dave Crag
-                const chestGeo = new THREE.BoxGeometry(1.1, 0.7, 0.7);
-                const chestMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 });
-                const chest = new THREE.Mesh(chestGeo, chestMat);
-                chest.position.set(0, 0.9, 0.1);
-                chest.castShadow = true;
-                group.add(chest);
-            } else if (slot === 'player3') { // Jonny Dark
-                const cowlGeo = new THREE.ConeGeometry(0.3, 0.5, 4);
-                const cowlMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.5 });
+            if (charKey === 'ivan') {
+                const armorGeo = new THREE.BoxGeometry(1.4, 0.3, 0.5);
+                const armorMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9 });
+                const armor = new THREE.Mesh(armorGeo, armorMat);
+                armor.position.set(0, 1.1, 0);
+                group.add(armor);
+            } else if (charKey === 'dave') {
+                const packGeo = new THREE.BoxGeometry(0.8, 0.8, 0.4);
+                const packMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2 });
+                const pack = new THREE.Mesh(packGeo, packMat);
+                pack.position.set(0, 1.0, -0.4);
+                group.add(pack);
+            } else if (charKey === 'jonny') {
+                const cowlGeo = new THREE.ConeGeometry(0.35, 0.5, 4);
+                const cowlMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.6 });
                 const cowl = new THREE.Mesh(cowlGeo, cowlMat);
-                cowl.position.set(0, 1.6, -0.1);
+                cowl.position.set(0, 1.65, -0.1);
                 cowl.rotation.x = -0.3;
                 group.add(cowl);
-            } else if (slot === 'player4') { // Kaelen Frost
+            } else if (charKey === 'sara') {
                 const antGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6);
-                const antMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe });
+                const antMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981 });
                 const ant = new THREE.Mesh(antGeo, antMat);
                 ant.position.set(0, 1.6, 0);
                 group.add(ant);
             }
 
             return group;
+        }
+
+        function addRemotePlayer(slot, data) {
+            const charKey = data.charKey || SLOT_TO_CHAR[slot];
+            const mesh = createCharacterMesh(charKey);
+            mesh.position.set(data.x, 0, data.z);
+            mesh.rotation.y = data.angle || 0;
+            scene.add(mesh);
+
+            remotePlayers[slot] = {
+                mesh: mesh,
+                targetPos: new THREE.Vector3(data.x, 0, data.z),
+                targetAngle: data.angle || 0
+            };
+        }
+
+        function updateRemotePlayer(slot, data) {
+            const p = remotePlayers[slot];
+            if (p) {
+                p.targetPos.set(data.x, 0, data.z);
+                p.targetAngle = data.angle || 0;
+            }
+        }
+
+        function removeRemotePlayer(slot) {
+            if (remotePlayers[slot]) {
+                scene.remove(remotePlayers[slot].mesh);
+                delete remotePlayers[slot];
+            }
         }
 
         function setupJoystick() {
@@ -481,128 +629,6 @@
             window.addEventListener('mouseup', handleEnd);
         }
 
-        function joinMultiplayerRoom() {
-            const roomRef = db.ref(ROOM_PATH);
-
-            roomRef.transaction((roomData) => {
-                if (roomData === null) roomData = {};
-                const slots = ["player1", "player2", "player3", "player4"];
-                let assigned = null;
-
-                for (let s of slots) {
-                    if (!roomData[s]) {
-                        assigned = s;
-                        break;
-                    }
-                }
-
-                if (!assigned) return;
-
-                roomData[assigned] = {
-                    token: myClientId,
-                    x: (Math.random() - 0.5) * 10,
-                    z: (Math.random() - 0.5) * 10,
-                    angle: 0,
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                };
-                return roomData;
-            }, (error, committed, snapshot) => {
-                if (error) {
-                    showOverlayError("Errore Connessione", "Impossibile connettersi al server.");
-                    return;
-                }
-                if (!committed) {
-                    showOverlayError("Stanza Piena (4/4)", "La stanza ha raggiunto il limite massimo di 4 giocatori.");
-                    return;
-                }
-
-                const data = snapshot.val();
-                const slots = ["player1", "player2", "player3", "player4"];
-                for (let s of slots) {
-                    if (data[s] && data[s].token === myClientId) {
-                        mySlot = s;
-                        break;
-                    }
-                }
-
-                if (mySlot) {
-                    setupLocalPlayer(data[mySlot]);
-                }
-            });
-        }
-
-        function setupLocalPlayer(initialData) {
-            myPlayerRef = db.ref(`${ROOM_PATH}/${mySlot}`);
-            myPlayerRef.onDisconnect().remove();
-
-            const hero = CHARACTERS[mySlot];
-            document.getElementById('slot-dot').style.backgroundColor = hero.hex;
-            document.getElementById('slot-dot').style.boxShadow = `0 0 10px ${hero.hex}`;
-            document.getElementById('player-slot-name').innerText = `${hero.name}`;
-            document.getElementById('status-overlay').classList.add('hidden');
-
-            localPlayerMesh = createPlayerMesh(mySlot);
-            localPlayerMesh.position.set(initialData.x, 0, initialData.z);
-            scene.add(localPlayerMesh);
-
-            controls.target.copy(localPlayerMesh.position);
-
-            listenRoomEvents();
-        }
-
-        function listenRoomEvents() {
-            const roomRef = db.ref(ROOM_PATH);
-
-            roomRef.on('value', (snapshot) => {
-                const roomData = snapshot.val() || {};
-                const activeCount = Object.keys(roomData).length;
-                document.getElementById('online-count').innerText = activeCount;
-
-                const slots = ["player1", "player2", "player3", "player4"];
-                slots.forEach(slot => {
-                    if (slot !== mySlot) {
-                        if (roomData[slot]) {
-                            if (!remotePlayers[slot]) {
-                                addRemotePlayer(slot, roomData[slot]);
-                            } else {
-                                updateRemotePlayer(slot, roomData[slot]);
-                            }
-                        } else if (remotePlayers[slot]) {
-                            removeRemotePlayer(slot);
-                        }
-                    }
-                });
-            });
-        }
-
-        function addRemotePlayer(slot, data) {
-            const mesh = createPlayerMesh(slot);
-            mesh.position.set(data.x, 0, data.z);
-            mesh.rotation.y = data.angle || 0;
-            scene.add(mesh);
-
-            remotePlayers[slot] = {
-                mesh: mesh,
-                targetPos: new THREE.Vector3(data.x, 0, data.z),
-                targetAngle: data.angle || 0
-            };
-        }
-
-        function updateRemotePlayer(slot, data) {
-            const p = remotePlayers[slot];
-            if (p) {
-                p.targetPos.set(data.x, 0, data.z);
-                p.targetAngle = data.angle || 0;
-            }
-        }
-
-        function removeRemotePlayer(slot) {
-            if (remotePlayers[slot]) {
-                scene.remove(remotePlayers[slot].mesh);
-                delete remotePlayers[slot];
-            }
-        }
-
         function syncLocalMovement() {
             if (!myPlayerRef || !localPlayerMesh) return;
             const now = Date.now();
@@ -616,19 +642,6 @@
                 });
             }
         }
-
-        async function leaveRoomAndGoHome() {
-            if (myPlayerRef) {
-                await myPlayerRef.remove();
-            }
-            window.location.href = 'index_home.html';
-        }
-
-        window.addEventListener('beforeunload', () => {
-            if (myPlayerRef) {
-                myPlayerRef.remove();
-            }
-        });
 
         function animate() {
             requestAnimationFrame(animate);
@@ -680,17 +693,35 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        function fruga() {
+            if (!myId) return;
+            let pa = parseInt(document.getElementById('pa-display').innerText);
+            if (pa < 1) return;
+            pa--;
+            document.getElementById('pa-display').innerText = pa;
+            loggar("Analisi settore completata. Nessuna anomalia rilevata.", myId);
+        }
+
+        function attacca() {
+            loggar("Attacco di contenimento sferrato!", myId);
+        }
+
+        function loggar(m, speaker) {
+            const b = document.getElementById('log');
+            if (!b) return;
+            const char = TEAM_DATA[speaker] || { n: "SYSTEM", color: "#888" };
+            b.innerHTML = `<div style="border-left:2px solid ${char.color}; padding-left:6px;"><span style="color:${char.color}">${char.n}:</span> "${m}"</div>` + b.innerHTML;
+        }
+
         function showOverlayError(title, desc) {
             document.getElementById('overlay-spinner').classList.add('hidden');
             document.getElementById('overlay-title').innerText = title;
             document.getElementById('overlay-desc').innerText = desc;
             document.getElementById('overlay-btn').classList.remove('hidden');
+            document.getElementById('status-overlay').classList.remove('hidden');
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            initThreeJS();
-            joinMultiplayerRoom();
-        });
+        window.onload = listenToRoom;
     </script>
 </body>
 </html>
