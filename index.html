@@ -3,53 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK: ANTEPRIMA TATTICA</title>
+    <title>CRYOPUNK: ELITE TACTICAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Firebase Legacy SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
-        body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
         #c3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* UI Overlay */
         .hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; display: flex; flex-direction: column; padding: 20px; }
         .hud * { pointer-events: auto; }
-        .selection-screen { position: fixed; inset: 0; z-index: 100; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-char { width: 280px; padding: 20px; margin: 10px; background: #1a1a1a; border: 2px solid #333; color: white; border-radius: 12px; cursor: pointer; text-align: center; }
-        .btn-char:hover { border-color: #0f0; background: #222; }
-        .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
-        .btn-ctrl { width: 70px; height: 70px; background: rgba(0,0,0,0.7); border: 2px solid #fff; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .btn-ctrl.active { background: #0f0; color: #000; }
-        .top-bar { background: rgba(0,0,0,0.8); border-left: 5px solid #0f0; padding: 15px; width: fit-content; color: white; border-radius: 0 10px 10px 0; }
+        
+        .selection-screen { 
+            position: fixed; inset: 0; z-index: 100; background: #000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 10px solid #111;
+        }
+
+        .btn-char { 
+            width: 320px; padding: 25px; margin: 10px; background: #050505; 
+            border-left: 5px solid #333; color: white; cursor: pointer; 
+            transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .btn-char:hover { border-left-color: #0f0; background: #0a0a0a; padding-left: 35px; }
+        .btn-char::after { content: 'READY?'; position: absolute; right: -50px; opacity: 0; transition: 0.3s; color: #0f0; font-size: 10px; }
+        .btn-char:hover::after { right: 20px; opacity: 1; }
+
+        .d-pad { position: fixed; bottom: 40px; left: 40px; display: grid; grid-template-columns: repeat(3, 65px); gap: 10px; }
+        .btn-ctrl { 
+            width: 65px; height: 65px; background: rgba(0,255,0,0.05); border: 1px solid rgba(0,255,0,0.3); 
+            color: #0f0; display: flex; align-items: center; justify-content: center; font-size: 20px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+        }
+        .btn-ctrl.active { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
+        
+        .nametag { position: absolute; color: white; background: rgba(0,0,0,0.7); padding: 2px 8px; border: 1px solid #0f0; font-size: 10px; pointer-events: none; transform: translate(-50%, -50%); white-space: nowrap; }
+
+        /* Effetto Scanline */
+        body::before {
+            content: " "; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 20; background-size: 100% 4px, 3px 100%; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
     <div id="c3d"></div>
+    <div id="tags-container" style="position: absolute; inset: 0; z-index: 5; pointer-events: none;"></div>
 
-    <!-- SELEZIONE -->
     <div id="selection-screen" class="selection-screen">
-        <h1 style="font-family: 'Orbitron'; color: white; font-size: 2rem; margin-bottom: 30px; letter-spacing: 5px;">CRYOPUNK</h1>
-        <div class="btn-char" onclick="pick('dave')">DAVE-RIG <br><span style="font-size: 10px; color: #888;">INGEGNERE (ALTO / CAPELLI NERI)</span></div>
-        <div class="btn-char" onclick="pick('ivan')">IVAN-VOSTOK <br><span style="font-size: 10px; color: #888;">ASSALTO (MASSICCIO / CAPELLI MARRONI)</span></div>
-        <div class="btn-char" onclick="pick('jonny')">JONNY DARK <br><span style="font-size: 10px; color: #888;">HACKER (SLANCIATO)</span></div>
+        <div style="text-align: center; margin-bottom: 50px;">
+            <h1 style="font-size: 4rem; font-weight: 900; color: #fff; letter-spacing: -2px;">CRYO<span style="color: #0f0;">PUNK</span></h1>
+            <p style="color: #444; font-size: 12px; letter-spacing: 5px;">TACTICAL ONLINE PREVIEW</p>
+        </div>
+        <div class="btn-char" onclick="pick('dave')">DAVE.RIG <span style="display:block; font-size:9px; color:#666;">SYS_ENGINEER</span></div>
+        <div class="btn-char" onclick="pick('ivan')">IVAN.VST <span style="display:block; font-size:9px; color:#666;">HEAVY_ASSAULT</span></div>
+        <div class="btn-char" onclick="pick('jonny')">JONNY.DRK <span style="display:block; font-size:9px; color:#666;">INFILTRATOR</span></div>
     </div>
 
-    <!-- UI GIOCO -->
     <div id="game-ui" class="hud" style="display: none;">
-        <div class="top-bar">
-            <div id="p-name" style="font-weight: 900; letter-spacing: 2px; font-size: 12px;">UNIT: ---</div>
-            <div style="font-size: 9px; color: #0f0; margin-top: 5px;">SISTEMA OPERATIVO // 60 FPS</div>
+        <div style="background: rgba(0,0,0,0.8); border-left: 4px solid #0f0; padding: 10px; width: 220px;">
+            <div id="p-name" style="font-size: 12px; color: #fff;">UNIT: ---</div>
+            <div id="p-coords" style="font-size: 9px; color: #0f0; font-family: monospace;">LOC: 0.0, 0.0</div>
         </div>
 
         <div class="d-pad">
-            <div></div><button class="btn-ctrl" id="up">▲</button><div></div>
-            <button class="btn-ctrl" id="left">◀</button>
-            <button class="btn-ctrl" id="down">▼</button>
-            <button class="btn-ctrl" id="right">▶</button>
+            <div></div><button class="btn-ctrl" id="up">W</button><div></div>
+            <button class="btn-ctrl" id="left">A</button>
+            <button class="btn-ctrl" id="down">S</button>
+            <button class="btn-ctrl" id="right">D</button>
         </div>
         
-        <button onclick="location.reload()" style="position:fixed; bottom:30px; right:30px; width:80px; height:80px; background:#f00; border-radius:50%; color:white; font-weight:bold; font-size:10px; border:3px solid #fff;">LOGOUT</button>
+        <button onclick="location.reload()" style="position:fixed; top:20px; right:20px; color:#555; font-size:10px;">[ TERMINATE_SESSION ]</button>
     </div>
 
     <script>
@@ -63,137 +92,190 @@
         const db = firebase.database();
 
         let myId = null, scene, camera, renderer, clock = new THREE.Clock();
-        let charMeshes = {}, input = {up: false, down: false, left: false, right: false};
+        let myMesh = null, otherPlayers = {}, input = { up: false, down: false, left: false, right: false };
+        let lastNetUpdate = 0;
+
+        const teamData = {
+            dave: { color: 0x00ffff, h: 1.6, w: 0.4 },
+            ivan: { color: 0xff0055, h: 1.9, w: 0.7 },
+            jonny: { color: 0xcc00ff, h: 1.7, w: 0.35 }
+        };
+
+        function createPlayerMesh(type, name) {
+            const data = teamData[type] || teamData.dave;
+            const group = new THREE.Group();
+            
+            // Corpo con materiale "Neon"
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(data.w * 2, data.h, data.w),
+                new THREE.MeshStandardMaterial({ 
+                    color: data.color, 
+                    emissive: data.color, 
+                    emissiveIntensity: 2 
+                })
+            );
+            body.position.y = data.h / 2;
+            group.add(body);
+
+            // Visore (per capire la direzione)
+            const visor = new THREE.Mesh(
+                new THREE.BoxGeometry(data.w * 1.5, 0.2, 0.2),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            visor.position.set(0, data.h - 0.3, -data.w/2);
+            group.add(visor);
+
+            // Etichetta Nome (HTML)
+            const label = document.createElement('div');
+            label.className = 'nametag';
+            label.innerText = name.split('_')[0].toUpperCase();
+            document.getElementById('tags-container').appendChild(label);
+            group.userData.label = label;
+
+            return group;
+        }
 
         function init3D() {
-            // SCENA E COLORE DI SICUREZZA (SE VEDI GRIGIO IL MOTORE È OK)
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1a1a); 
+            scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
-            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputEncoding = THREE.sRGBEncoding;
             document.getElementById('c3d').appendChild(renderer.domElement);
 
-            // LUCI MASSIVE
-            const ambient = new THREE.AmbientLight(0xffffff, 1);
-            scene.add(ambient);
-            const directional = new THREE.DirectionalLight(0xffffff, 1);
-            directional.position.set(10, 50, 10);
-            scene.add(directional);
+            // Illuminazione
+            scene.add(new THREE.AmbientLight(0x222222));
+            const pLight = new THREE.PointLight(0x0f0, 1.5, 50);
+            pLight.position.set(0, 10, 0);
+            scene.add(pLight);
 
-            // PAVIMENTO CON GRIGLIA
-            const ground = new THREE.Mesh(
-                new THREE.PlaneGeometry(1000, 1000),
-                new THREE.MeshStandardMaterial({ color: 0x222222 })
-            );
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
-            
-            const grid = new THREE.GridHelper(1000, 100, 0x00ff00, 0x444444);
+            // Griglia Pavimento Avanzata
+            const grid = new THREE.GridHelper(200, 40, 0x00ff00, 0x111111);
             scene.add(grid);
 
-            // CREAZIONE MODELLI FISICI
-            const team = {
-                dave: { color: 0xfbbf24, h: 5.0, w: 1.0, hair: 0x000000 },
-                ivan: { color: 0xff4444, h: 4.0, w: 2.2, hair: 0x5d4037 },
-                jonny: { color: 0xbc6ff1, h: 4.2, w: 1.1, hair: 0x000000 }
-            };
-
-            Object.keys(team).forEach(id => {
-                const d = team[id];
-                const group = new THREE.Group();
-                
-                // Corpo
-                const body = new THREE.Mesh(
-                    new THREE.CapsuleGeometry(d.w * 0.5, d.h * 0.6, 8, 16),
-                    new THREE.MeshStandardMaterial({color: d.color})
-                );
-                body.position.y = d.h * 0.7;
-                group.add(body);
-
-                // Testa
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 16, 16),
-                    new THREE.MeshStandardMaterial({color: 0xffdbac})
-                );
-                head.position.y = d.h * 1.35;
-                group.add(head);
-
-                // Capelli
-                const hair = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.7, 0.2, 0.7),
-                    new THREE.MeshBasicMaterial({color: d.hair})
-                );
-                hair.position.y = d.h * 1.5;
-                if(id==='ivan') hair.rotation.z = 0.5;
-                group.add(hair);
-
-                scene.add(group);
-                charMeshes[id] = group;
-                group.position.set(id === 'ivan' ? 10 : (id === 'jonny' ? -10 : 0), 0, 0);
-            });
-
             setupInput();
+            listenToPlayers();
             loop();
         }
 
         function setupInput() {
+            const handleKey = (e, val) => {
+                const k = e.key.toLowerCase();
+                if(k === 'w' || k === 'arrowup') input.up = val;
+                if(k === 's' || k === 'arrowdown') input.down = val;
+                if(k === 'a' || k === 'arrowleft') input.left = val;
+                if(k === 'd' || k === 'arrowright') input.right = val;
+            };
+            window.onkeydown = (e) => handleKey(e, true);
+            window.onkeyup = (e) => handleKey(e, false);
+
             const bind = (id, key) => {
                 const el = document.getElementById(id);
-                const start = (e) => { e.preventDefault(); input[key] = true; el.classList.add('active'); };
-                const stop = (e) => { e.preventDefault(); input[key] = false; el.classList.remove('active'); };
-                el.addEventListener('mousedown', start); el.addEventListener('mouseup', stop);
-                el.addEventListener('touchstart', start); el.addEventListener('touchend', stop);
+                el.onpointerdown = () => { input[key] = true; el.classList.add('active'); };
+                el.onpointerup = () => { input[key] = false; el.classList.remove('active'); };
             };
             bind('up', 'up'); bind('down', 'down'); bind('left', 'left'); bind('right', 'right');
         }
 
+        function listenToPlayers() {
+            db.ref('game/players').on('value', (snap) => {
+                const players = snap.val() || {};
+                Object.keys(players).forEach(id => {
+                    if (id === myId) return;
+                    if (!otherPlayers[id]) {
+                        otherPlayers[id] = createPlayerMesh(players[id].type, id);
+                        scene.add(otherPlayers[id]);
+                    }
+                    otherPlayers[id].targetPos = { x: players[id].x, z: players[id].z, r: players[id].r };
+                });
+                // Rimuovi disconnessi
+                Object.keys(otherPlayers).forEach(id => {
+                    if (!players[id]) {
+                        if(otherPlayers[id].userData.label) otherPlayers[id].userData.label.remove();
+                        scene.remove(otherPlayers[id]);
+                        delete otherPlayers[id];
+                    }
+                });
+            });
+        }
+
         function loop() {
             requestAnimationFrame(loop);
-            const delta = clock.getDelta();
+            const dt = clock.getDelta();
+            const now = Date.now();
 
-            if (myId && charMeshes[myId]) {
-                const m = charMeshes[myId];
-                const speed = 30 * delta;
-                const rSpeed = 4 * delta;
+            if (myMesh) {
+                // Movimento Locale
+                const speed = 12 * dt;
+                const rotSpeed = 3 * dt;
+                if (input.up) myMesh.translateZ(-speed);
+                if (input.down) myMesh.translateZ(speed);
+                if (input.left) myMesh.rotation.y += rotSpeed;
+                if (input.right) myMesh.rotation.y -= rotSpeed;
 
-                if (input.up) m.translateZ(-speed);
-                if (input.down) m.translateZ(speed);
-                if (input.left) m.rotation.y += rSpeed;
-                if (input.right) m.rotation.y -= rSpeed;
+                // Limiti mappa (Collisione semplice)
+                myMesh.position.x = THREE.MathUtils.clamp(myMesh.position.x, -95, 95);
+                myMesh.position.z = THREE.MathUtils.clamp(myMesh.position.z, -95, 95);
 
-                // Sync Database (Heartbeat incluso)
-                if (clock.elapsedTime % 0.05 < 0.02) {
+                // Throttling Network (Ogni 50ms)
+                if (now - lastNetUpdate > 50) {
                     db.ref(`game/players/${myId}`).update({
-                        x: m.position.x, z: m.position.z, r: m.rotation.y, lastSeen: Date.now(), s: 'OCCUPATO'
+                        x: myMesh.position.x, z: myMesh.position.z, r: myMesh.rotation.y,
+                        last: now
                     });
+                    lastNetUpdate = now;
+                    document.getElementById('p-coords').innerText = `LOC: ${myMesh.position.x.toFixed(1)}, ${myMesh.position.z.toFixed(1)}`;
                 }
 
-                // CAMERA REAR-HIGH (Inclinata e stabile)
-                m.updateMatrixWorld();
-                const offset = new THREE.Vector3(0, 22, 38).applyMatrix4(m.matrixWorld);
-                camera.position.lerp(offset, 0.1);
-                camera.lookAt(m.position.x, 2, m.position.z);
+                // Camera Smooth Follow
+                const camOffset = new THREE.Vector3(0, 12, 18).applyMatrix4(myMesh.matrixWorld);
+                camera.position.lerp(camOffset, 0.1);
+                camera.lookAt(myMesh.position.x, 1, myMesh.position.z);
+                updateTag(myMesh, "TU");
             }
+
+            // Interpolazione altri giocatori e update tags
+            Object.keys(otherPlayers).forEach(id => {
+                const p = otherPlayers[id];
+                if (p.targetPos) {
+                    p.position.x = THREE.MathUtils.lerp(p.position.x, p.targetPos.x, 0.15);
+                    p.position.z = THREE.MathUtils.lerp(p.position.z, p.targetPos.z, 0.15);
+                    p.rotation.y = THREE.MathUtils.lerp(p.rotation.y, p.targetPos.r, 0.15);
+                }
+                updateTag(p, id.split('_')[0]);
+            });
 
             renderer.render(scene, camera);
         }
 
-        function pick(id) {
-            myId = id;
-            document.getElementById('selection-screen').style.display = 'none';
+        function updateTag(mesh, text) {
+            if (!mesh.userData.label) return;
+            const vector = mesh.position.clone().add(new THREE.Vector3(0, 2.5, 0));
+            vector.project(camera);
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+            mesh.userData.label.style.left = `${x}px`;
+            mesh.userData.label.style.top = `${y}px`;
+            mesh.userData.label.style.display = vector.z < 1 ? 'block' : 'none';
+        }
+
+        function pick(type) {
+            myId = type + "_" + Math.floor(Math.random() * 999);
+            document.getElementById('selection-screen').style.opacity = 0;
+            setTimeout(() => document.getElementById('selection-screen').style.display = 'none', 300);
             document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('p-name').innerText = "UNIT: " + id.toUpperCase();
+            document.getElementById('p-name').innerText = "UNIT: " + myId.toUpperCase();
             
-            // Inizializza Heartbeat su Firebase
-            db.ref(`game/players/${id}`).update({ s: 'OCCUPATO', lastSeen: Date.now() });
-            setInterval(() => {
-                db.ref(`game/players/${myId}/lastSeen`).set(Date.now());
-            }, 2000);
-            db.ref(`game/players/${id}`).onDisconnect().update({ s: 'LIBERO' });
+            myMesh = createPlayerMesh(type, myId);
+            scene.add(myMesh);
+
+            const userRef = db.ref(`game/players/${myId}`);
+            userRef.set({ type: type, x: 0, z: 0, r: 0 });
+            userRef.onDisconnect().remove();
 
             init3D();
         }
