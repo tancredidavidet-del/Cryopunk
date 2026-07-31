@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CRIOPUNK - 3D MULTIPLAYER</title>
+    <title>CRIOPUNK - REVOLUTION</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
-    <!-- Post-Processing Scripts -->
+    <!-- Post-Processing -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -24,441 +24,337 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap');
         
-        :root {
-            --primary: #00e5ff;
-            --accent: #ff0033;
-            --bg-dark: #010204;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg-dark); font-family: 'Share Tech Mono', monospace; color: white; }
-
+        :root { --primary: #00e5ff; --accent: #ff0033; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Share Tech Mono', monospace; color: white; }
         #game-canvas { position: fixed; inset: 0; z-index: 1; }
 
-        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; padding: 20px; }
-        .ui-layer * { pointer-events: auto; }
-
-        /* Schermata Iniziale */
+        /* Titolo Iniziale */
         .selection-screen {
-            position: fixed; inset: 0; z-index: 100; background: radial-gradient(circle at center, #0a0f1a 0%, #010204 100%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;
+            position: fixed; inset: 0; z-index: 100; background: radial-gradient(circle at center, #0a0f1a 0%, #000 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-
         .title-glow {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 4rem; font-weight: 900; letter-spacing: 15px;
-            color: #fff; text-shadow: 0 0 20px var(--primary), 0 0 40px var(--primary);
-            margin-bottom: 10px; text-transform: uppercase; font-style: italic;
+            font-family: 'Orbitron', sans-serif; font-size: 5rem; font-weight: 900; 
+            text-shadow: 0 0 30px var(--primary); font-style: italic; letter-spacing: 10px;
         }
 
         .char-card {
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.3s ease; cursor: pointer; border-radius: 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s;
         }
-        .char-card:hover { border-color: var(--primary); background: rgba(0, 229, 255, 0.1); transform: scale(1.02); }
-        .char-card.occupied { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+        .char-card:hover { border-color: var(--primary); background: rgba(0, 229, 255, 0.1); }
+        .char-card.occupied { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
 
         /* HUD */
-        .hp-bar-container {
-            width: 200px; height: 10px; background: rgba(255,0,0,0.2); border-radius: 5px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-        }
-        #hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--primary)); transition: width 0.3s ease; }
+        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; padding: 25px; }
+        .ui-layer * { pointer-events: auto; }
+        .hp-bar { width: 250px; height: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
+        #hp-fill { height: 100%; background: linear-gradient(90deg, #ff0033, #00e5ff); width: 100%; transition: 0.4s; }
 
-        .btn-action {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(0,229,255,0.3);
-            color: white; padding: 12px; border-radius: 8px; font-weight: bold; text-transform: uppercase; font-size: 10px;
-        }
-        .btn-action:active { background: var(--primary); color: black; }
-
-        #joystick-zone {
-            width: 120px; height: 120px; background: rgba(255,255,255,0.05);
-            border: 2px solid var(--primary); border-radius: 50%; position: absolute; bottom: 40px; left: 40px;
-            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);
-        }
-        #joystick-knob { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 20px var(--primary); }
-
-        #log { font-size: 9px; color: #aaa; height: 60px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 5px; border-radius: 5px; }
+        #joystick-zone { width: 130px; height: 130px; border: 2px solid var(--primary); border-radius: 50%; position: absolute; bottom: 40px; left: 40px; background: rgba(0,229,255,0.05); backdrop-filter: blur(10px); }
+        #joystick-knob { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; position: absolute; top: 40px; left: 40px; box-shadow: 0 0 20px var(--primary); }
     </style>
 </head>
 <body>
 
     <canvas id="game-canvas"></canvas>
 
-    <!-- SCHERMATA SELEZIONE -->
+    <!-- SCHERMATA START -->
     <div id="selection-screen" class="selection-screen">
-        <div class="title-glow">CRIOPUNK</div>
-        <div class="text-cyan-500 tracking-[0.5em] mb-12 text-sm uppercase">Sector Control Multiplayer</div>
-        <div id="char-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl"></div>
+        <div class="title-glow mb-2">CRIOPUNK</div>
+        <div class="text-cyan-400 tracking-[0.6em] mb-12 text-sm uppercase">Advanced Sector Survival</div>
+        <div id="char-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl px-10"></div>
     </div>
 
-    <!-- HUD DI GIOCO -->
+    <!-- HUD -->
     <div id="game-ui" class="ui-layer hidden">
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <div class="text-xs text-cyan-400 mb-1">INTEGRITÀ SISTEMI</div>
-                <div class="hp-bar-container"><div id="hp-fill"></div></div>
-                <div id="hp-text" class="text-[10px] mt-1">SINC IN CORSO...</div>
-            </div>
-            <button onclick="location.reload()" class="bg-red-600 px-4 py-1 rounded text-[10px] font-bold">DISCONNETTI</button>
-        </div>
-
-        <div class="mt-auto flex flex-col gap-4">
-            <div id="log"></div>
+        <div class="hp-bar mb-2"><div id="hp-fill"></div></div>
+        <div class="text-[10px] text-cyan-400 uppercase font-bold mb-8">Armor Integrity Sinc</div>
+        
+        <div class="mt-auto max-w-xs space-y-4">
+            <div id="log" class="text-[10px] h-20 overflow-y-auto bg-black/40 p-2 rounded border border-white/5"></div>
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="fruga()" class="btn-action">CONSOLE (APRI PORTA)</button>
-                <button onclick="attacca()" class="btn-action !border-red-500">ATTIVA BLASTER</button>
+                <button onclick="fruga()" class="bg-white/10 p-3 rounded text-[10px] font-bold border border-white/20">INTERAGISCI</button>
+                <button onclick="attacca()" class="bg-red-900/40 p-3 rounded text-[10px] font-bold border border-red-500/50">FIRE BLASTER</button>
             </div>
-            <div style="height: 160px;"></div> <!-- Spazio per joystick -->
+            <div style="height: 150px;"></div>
         </div>
 
-        <div id="joystick-zone">
-            <div id="joystick-knob"></div>
-        </div>
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
     </div>
 
     <script>
-        // CONFIGURAZIONE FIREBASE (Inserisci i tuoi dati qui!)
+        // CONFIGURAZIONE FIREBASE (Usa i tuoi dati cryopunk-90f36)
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "---",
-            appId: "---"
+            apiKey: "INSERISCI_LA_TUA_API_KEY", 
+            authDomain: "cryopunk-90f36.firebaseapp.com",
+            databaseURL: "https://cryopunk-90f36-default-rtdb.firebaseio.com",
+            projectId: "cryopunk-90f36",
+            storageBucket: "cryopunk-90f36.appspot.com",
+            messagingSenderId: "593721385474",
+            appId: "INSERISCI_IL_TUO_APP_ID"
         };
 
-        // Inizializzazione Firebase
-        let db = null;
-        let isFirebaseAvailable = false;
-        try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.database();
-                isFirebaseAvailable = true;
-            }
-        } catch (e) { console.error("Firebase fallito", e); }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const ROOM_PATH = "game_v2_realistic";
 
-        const ROOM_PATH = "criopunk_lobby_1";
-        const TEAM_DATA = {
-            ivan: { n: "IVAN-V", role: "Tactical", color: "#ff0033", num: 0xff0033, slot: "p1" },
-            dave: { n: "DAVE-R", role: "Engineer", color: "#fbbf24", num: 0xfbbf24, slot: "p2" },
-            jonny: { n: "JONNY-D", role: "Hacker", color: "#bc6ff1", num: 0xbc6ff1, slot: "p3" },
-            sara: { n: "SARA-M", role: "Medic", color: "#00e5ff", num: 0x00e5ff, slot: "p4" }
+        const TEAM = {
+            davide: { n: "DAVIDE", desc: "Slanciato, Cappotto Grigio", color: "#6b7280", slot: "p1" },
+            ivan: { n: "IVAN", desc: "Muscoloso, Fucile, Mimetico", color: "#166534", slot: "p2" },
+            jonny: { n: "JONNY", desc: "Hoodie Nero, Oversize", color: "#111827", slot: "p3" }
         };
-        const SLOT_TO_CHAR = { p1: "ivan", p2: "dave", p3: "jonny", p4: "sara" };
 
-        let scene, camera, renderer, composer, controls, localPlayerMesh, doorMesh;
+        let scene, camera, renderer, composer, localPlayerMesh, doorMesh;
         let myId, mySlot, myPlayerRef;
-        let myHP = 100;
-        let roomState = {};
-        const remotePlayers = {};
+        let remotePlayers = {};
         let joystickVector = { x: 0, y: 0 };
+        const colliders = [];
 
-        // --- INIZIALIZZAZIONE ---
-
+        // --- INIZIALIZZAZIONE APP ---
         function initApp() {
-            updateSelectionUI();
-            if (isFirebaseAvailable) {
-                db.ref(ROOM_PATH).on('value', snap => {
-                    roomState = snap.val() || {};
-                    updateSelectionUI();
-                    syncHPAndDoor();
-                    updateRemotePlayers();
-                });
-                
-                db.ref(`${ROOM_PATH}/events`).on('child_added', snap => {
-                    const ev = snap.val();
-                    if(ev && ev.type === 'laser') visualizzaLaser(ev.fromSlot);
-                });
-            }
-        }
-
-        function updateSelectionUI() {
             const grid = document.getElementById('char-grid');
-            if (!grid || document.getElementById('selection-screen').style.display === 'none') return;
-            
-            grid.innerHTML = Object.keys(TEAM_DATA).map(k => {
-                const char = TEAM_DATA[k];
-                const occupied = !!roomState[char.slot];
-                return `
-                    <div class="char-card p-4 flex justify-between items-center ${occupied ? 'occupied' : ''}" onclick="selectChar('${k}')">
-                        <div class="flex items-center gap-4">
-                            <div class="w-4 h-4 rounded-full" style="background:${char.color}; box-shadow: 0 0 10px ${char.color}"></div>
-                            <div>
-                                <div class="font-bold text-white text-lg">${char.n}</div>
-                                <div class="text-[10px] text-neutral-500 uppercase tracking-widest">${char.role}</div>
+            db.ref(ROOM_PATH).on('value', snap => {
+                const state = snap.val() || {};
+                grid.innerHTML = Object.keys(TEAM).map(k => {
+                    const char = TEAM[k];
+                    const occ = !!state[char.slot];
+                    return `
+                        <div class="char-card ${occ ? 'occupied' : ''}" onclick="selectChar('${k}')">
+                            <div class="text-2xl font-bold text-white mb-1">${char.n}</div>
+                            <div class="text-[10px] text-cyan-400 uppercase mb-4">${char.desc}</div>
+                            <div class="text-[9px] ${occ ? 'text-red-500' : 'text-green-400'} font-black">
+                                ${occ ? 'UNITÀ IN MISSIONE' : 'DISPONIBILE'}
                             </div>
                         </div>
-                        <div class="text-xs font-black ${occupied ? 'text-red-500' : 'text-cyan-400'}">
-                            ${occupied ? 'ONLINE' : 'SELECT'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+                syncGame(state);
+            });
         }
 
         function selectChar(key) {
-            const slot = TEAM_DATA[key].slot;
-            if (isFirebaseAvailable) {
-                db.ref(`${ROOM_PATH}/${slot}`).transaction(curr => {
-                    if (curr) return;
-                    return { charKey: key, x: 0, z: 0, angle: 0, hp: 100, lastSeen: Date.now() };
-                }, (err, comm) => {
-                    if (comm) startGame(key, slot);
-                });
-            } else startGame(key, slot);
+            const slot = TEAM[key].slot;
+            db.ref(`${ROOM_PATH}/${slot}`).transaction(curr => {
+                if (curr) return;
+                return { charKey: key, x: Math.random()*4-2, z: Math.random()*4-2, angle: 0, hp: 100 };
+            }, (err, ok) => { if (ok) start(key, slot); });
         }
 
-        function startGame(key, slot) {
+        function start(key, slot) {
             myId = key; mySlot = slot;
-            if (isFirebaseAvailable) {
-                myPlayerRef = db.ref(`${ROOM_PATH}/${mySlot}`);
-                myPlayerRef.onDisconnect().remove();
-            }
+            myPlayerRef = db.ref(`${ROOM_PATH}/${mySlot}`);
+            myPlayerRef.onDisconnect().remove();
             document.getElementById('selection-screen').style.display = 'none';
             document.getElementById('game-ui').classList.remove('hidden');
             init3D();
         }
 
-        // --- CORE 3D ---
-
+        // --- ENGINE 3D ---
         function init3D() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x010204);
-            scene.fog = new THREE.FogExp2(0x010204, 0.02);
+            scene.fog = new THREE.FogExp2(0x000000, 0.03);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 12, 20);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 20);
 
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.shadowMap.enabled = true;
 
-            // Bloom
+            // BLOOM (Glow realistico)
             const renderScene = new THREE.RenderPass(scene, camera);
-            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.25; bloomPass.strength = 1.0; bloomPass.radius = 0.4;
+            const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.85);
             composer = new THREE.EffectComposer(renderer);
-            composer.addPass(renderScene);
-            composer.addPass(bloomPass);
+            composer.addPass(renderScene); composer.addPass(bloom);
 
-            // Luci
-            const amb = new THREE.AmbientLight(0x404040, 0.8); scene.add(amb);
-            const spot = new THREE.PointLight(0xffffff, 1); spot.position.set(0, 20, 0); spot.castShadow = true; scene.add(spot);
-
-            buildCrioRoom();
-            localPlayerMesh = createHumanoid(myId);
+            buildEnvironment();
+            localPlayerMesh = createHuman(myId);
             scene.add(localPlayerMesh);
 
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.maxPolarAngle = Math.PI/2.1;
-
             setupJoystick();
-            window.addEventListener('resize', onResize);
-            requestAnimationFrame(animate);
+            animate();
         }
 
-        function buildCrioRoom() {
-            // Pavimento Riflettente
-            const floor = new THREE.Mesh(
-                new THREE.PlaneGeometry(100, 100),
-                new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.05, metalness: 0.9 })
-            );
-            floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+        function buildEnvironment() {
+            // Pavimento riflettente
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1, metalness: 0.8 }));
+            floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-            // Pareti e Luci Imperiali
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 });
-            for(let i = -20; i <= 20; i += 10) {
-                [[-25, i, Math.PI/2], [25, i, -Math.PI/2], [i, -25, 0]].forEach(p => {
-                    const wall = new THREE.Mesh(new THREE.BoxGeometry(8, 15, 1), wallMat);
-                    wall.position.set(p[0], 7.5, p[1]); wall.rotation.y = p[2];
-                    scene.add(wall);
-                    // Pannello Luce
-                    const l = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-                    l.position.set(p[0], 7.5, p[1]); l.rotation.y = p[2]; l.position.add(new THREE.Vector3(0,0,0.6).applyAxisAngle(new THREE.Vector3(0,1,0), p[2]));
-                    scene.add(l);
-                });
-            }
-
-            // Nucleo Centrale
-            const core = new THREE.Mesh(
-                new THREE.CylinderGeometry(3, 3, 20, 32),
-                new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 2, transparent: true, opacity: 0.2 })
-            );
-            core.position.y = 10; scene.add(core);
-
-            // Porta Sincronizzata
-            doorMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 10, 0.5), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1 }));
-            doorMesh.position.set(0, 5, -24.4); scene.add(doorMesh);
-        }
-
-        function createHumanoid(id) {
-            const g = new THREE.Group();
-            const c = TEAM_DATA[id].num;
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: c }));
-            body.position.y = 1.2; body.castShadow = true; g.add(body);
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.35), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            head.position.y = 2.1; g.add(head);
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.3), new THREE.MeshBasicMaterial({ color: c }));
-            visor.position.set(0, 2.15, 0.25); g.add(visor);
-            return g;
-        }
-
-        // --- LOGICA GIOCO ---
-
-        function attacca() {
-            if (!isFirebaseAvailable) return;
-            const ref = db.ref(`${ROOM_PATH}/events`).push();
-            ref.set({ type: 'laser', fromSlot: mySlot, ts: Date.now() });
-            setTimeout(() => ref.remove(), 1000);
-            loggar("Sistemi Blaster attivi", myId);
-        }
-
-        function visualizzaLaser(slot) {
-            let shooter = (slot === mySlot) ? localPlayerMesh : remotePlayers[slot]?.mesh;
-            if (!shooter) return;
-
-            const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(shooter.quaternion);
-            const laserGeo = new THREE.CylinderGeometry(0.04, 0.04, 30, 8);
-            const laserMat = new THREE.MeshBasicMaterial({ color: TEAM_DATA[SLOT_TO_CHAR[slot]].num });
-            const laser = new THREE.Mesh(laserGeo, laserMat);
-            
-            laser.position.copy(shooter.position).addScaledVector(dir, 15);
-            laser.position.y = 1.5;
-            laser.lookAt(shooter.position.x + dir.x * 100, 1.5, shooter.position.z + dir.z * 100);
-            laser.rotation.x = Math.PI / 2;
-            scene.add(laser);
-            setTimeout(() => { scene.remove(laser); laserGeo.dispose(); laserMat.dispose(); }, 100);
-
-            // Danno (solo se ho sparato io)
-            if (slot === mySlot && isFirebaseAvailable) {
-                const ray = new THREE.Raycaster(new THREE.Vector3(shooter.position.x, 1.5, shooter.position.z), dir);
-                Object.keys(remotePlayers).forEach(s => {
-                    if (ray.intersectObject(remotePlayers[s].mesh, true).length > 0) {
-                        db.ref(`${ROOM_PATH}/${s}/hp`).transaction(h => (h || 100) - 15);
-                        loggar("Bersaglio colpito!", myId);
-                    }
-                });
-            }
-        }
-
-        function fruga() {
-            if (!isFirebaseAvailable) return;
-            const dRef = db.ref(`${ROOM_PATH}/doorOpen`);
-            dRef.once('value', s => dRef.set(!s.val()));
-        }
-
-        function syncHPAndDoor() {
-            if (mySlot && roomState[mySlot]) {
-                myHP = roomState[mySlot].hp || 100;
-                document.getElementById('hp-fill').style.width = myHP + "%";
-                document.getElementById('hp-text').innerText = `STATUS: ${myHP}% INTEGRITY`;
-                if (myHP <= 0) {
-                    db.ref(`${ROOM_PATH}/${mySlot}/hp`).set(100);
-                    localPlayerMesh.position.set(0,0,0);
-                    loggar("RIAVVIO SISTEMI...", "ivan");
-                }
-            }
-            if (doorMesh) {
-                const targetY = roomState.doorOpen ? 14 : 5;
-                doorMesh.position.y = THREE.MathUtils.lerp(doorMesh.position.y, targetY, 0.1);
-            }
-        }
-
-        function updateRemotePlayers() {
-            Object.keys(roomState).forEach(s => {
-                if (s !== mySlot && s.startsWith('p')) {
-                    if (!remotePlayers[s]) {
-                        const m = createHumanoid(roomState[s].charKey);
-                        scene.add(m);
-                        remotePlayers[s] = { mesh: m, target: new THREE.Vector3(), tAngle: 0 };
-                    }
-                    remotePlayers[s].target.set(roomState[s].x, 0, roomState[s].z);
-                    remotePlayers[s].tAngle = roomState[s].angle;
-                }
-            });
-            Object.keys(remotePlayers).forEach(s => {
-                if (!roomState[s]) {
-                    scene.remove(remotePlayers[s].mesh);
-                    delete remotePlayers[s];
-                }
-            });
-        }
-
-        // --- LOOP E INPUT ---
-
-        function setupJoystick() {
-            const zone = document.getElementById('joystick-zone');
-            const knob = document.getElementById('joystick-knob');
-            let active = false;
-
-            const handleMove = (e) => {
-                if (!active) return;
-                const touch = e.touches ? e.touches[0] : e;
-                const rect = zone.getBoundingClientRect();
-                const center = { x: rect.left + 60, y: rect.top + 60 };
-                let dx = touch.clientX - center.x;
-                let dy = touch.clientY - center.y;
-                const dist = Math.min(Math.hypot(dx, dy), 50);
-                const angle = Math.atan2(dy, dx);
-                
-                knob.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-                joystickVector.x = (Math.cos(angle)*dist) / 50;
-                joystickVector.y = (Math.sin(angle)*dist) / 50;
+            // Muri (Collisioni)
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 });
+            const createWall = (w, h, d, x, z) => {
+                const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
+                m.position.set(x, h/2, z); scene.add(m);
+                colliders.push(new THREE.Box3().setFromObject(m));
             };
+            createWall(50, 15, 1, 0, -25); // Nord
+            createWall(50, 15, 1, 0, 25);  // Sud
+            createWall(1, 15, 50, -25, 0); // Ovest
+            createWall(1, 15, 50, 25, 0);  // Est
 
-            zone.addEventListener('touchstart', () => active = true);
-            zone.addEventListener('mousedown', () => active = true);
-            window.addEventListener('touchmove', handleMove);
-            window.addEventListener('mousemove', handleMove);
-            window.addEventListener('touchend', () => { active = false; joystickVector = {x:0, y:0}; knob.style.transform = ''; });
-            window.addEventListener('mouseup', () => { active = false; joystickVector = {x:0, y:0}; knob.style.transform = ''; });
+            // TUBI LUNGO LE PARETI
+            for(let i = 0; i < 4; i++) {
+                const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 50, 12), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 1 }));
+                pipe.rotation.z = Math.PI/2; pipe.position.set(0, 1 + i*3, -24.3);
+                scene.add(pipe);
+            }
+
+            // COMPUTER GIGANTI E COORDINATE
+            const createMonitor = (x, z, rot) => {
+                const group = new THREE.Group();
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 0.5), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+                group.add(frame);
+                
+                // Schermo animato (Canvas)
+                const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                const tex = new THREE.CanvasTexture(canvas);
+                setInterval(() => {
+                    ctx.fillStyle = 'black'; ctx.fillRect(0,0,512,256);
+                    ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(0, 128); ctx.lineTo(512, 128); ctx.stroke(); // Rotta
+                    ctx.fillStyle = '#00e5ff'; ctx.font = '20px monospace';
+                    ctx.fillText(`COORD: ${Math.random().toFixed(4)} / ${Math.random().toFixed(4)}`, 20, 50);
+                    ctx.fillText("SECTOR: CRIOPUNK-ALPHA", 20, 80);
+                    tex.needsUpdate = true;
+                }, 100);
+
+                const screen = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 4.5), new THREE.MeshBasicMaterial({ map: tex }));
+                screen.position.z = 0.3; group.add(screen);
+                group.position.set(x, 4, z); group.rotation.y = rot;
+                scene.add(group);
+                colliders.push(new THREE.Box3().setFromObject(frame));
+            };
+            createMonitor(-10, -24, 0);
+            createMonitor(10, -24, 0);
+
+            // Luci
+            const p1 = new THREE.PointLight(0x00e5ff, 2, 30); p1.position.set(-10, 5, -20); scene.add(p1);
+            const p2 = new THREE.PointLight(0xff0033, 1, 30); p2.position.set(15, 8, 10); scene.add(p2);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.2));
         }
 
+        // --- CREAZIONE PERSONAGGI ---
+        function createHuman(id) {
+            const group = new THREE.Group();
+            const matHuman = new THREE.MeshStandardMaterial({ color: 0xdbac98 }); // Pelle
+            
+            // Gambe e Tronco
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 1.2), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            body.position.y = 1.1; group.add(body);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.3), matHuman);
+            head.position.y = 2.1; group.add(head);
+
+            if (id === 'davide') {
+                // Cappotto lungo grigio scuro
+                const coat = new THREE.Mesh(new THREE.BoxGeometry(1, 1.8, 0.6), new THREE.MeshStandardMaterial({ color: 0x2d2d2d }));
+                coat.position.y = 1.2; group.add(coat);
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.35), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                hair.position.y = 2.35; group.add(hair);
+            } 
+            else if (id === 'ivan') {
+                // Muscoloso, canottiera bianca, pantaloni camo
+                body.scale.set(1.4, 1, 1.2); body.material.color.set(0xffffff);
+                const legs = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1, 0.5), new THREE.MeshStandardMaterial({ color: 0x3f6212 }));
+                legs.position.y = 0.5; group.add(legs);
+                // Fucile
+                const gun = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.2), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                gun.position.set(0.6, 1.5, 0.4); group.add(gun);
+            }
+            else if (id === 'jonny') {
+                // Felpa nera con cappuccio
+                const hoodie = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 0.7), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                hoodie.position.y = 1.4; group.add(hoodie);
+                const hood = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                hood.position.y = 2.1; group.add(hood);
+                const pants = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1), new THREE.MeshStandardMaterial({ color: 0xd6d3d1 }));
+                pants.position.y = 0.5; group.add(pants);
+            }
+
+            return group;
+        }
+
+        // --- LOOP E FISICA ---
         function animate() {
             requestAnimationFrame(animate);
-            
-            if (localPlayerMesh && (Math.abs(joystickVector.x) > 0.1 || Math.abs(joystickVector.y) > 0.1)) {
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                forward.y = 0; forward.normalize();
-                const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward);
+
+            if (localPlayerMesh) {
+                const prevPos = localPlayerMesh.position.clone();
                 
-                const move = new THREE.Vector3().addScaledVector(forward, -joystickVector.y).addScaledVector(right, -joystickVector.x);
-                localPlayerMesh.position.addScaledVector(move, 0.2);
-                localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
-                
-                if (isFirebaseAvailable && myPlayerRef) {
+                // Movimento relativo alla camera
+                if (Math.abs(joystickVector.x) > 0.1 || Math.abs(joystickVector.y) > 0.1) {
+                    const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+                    dir.y = 0; dir.normalize();
+                    const side = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), dir);
+
+                    const move = new THREE.Vector3().addScaledVector(dir, -joystickVector.y).addScaledVector(side, -joystickVector.x);
+                    localPlayerMesh.position.addScaledVector(move, 0.2);
+                    localPlayerMesh.rotation.y = Math.atan2(move.x, move.z);
+
+                    // COLLISIONI
+                    const playerBox = new THREE.Box3().setFromObject(localPlayerMesh);
+                    let collision = false;
+                    for(let wall of colliders) {
+                        if (playerBox.intersectsBox(wall)) { collision = true; break; }
+                    }
+                    if (collision) localPlayerMesh.position.copy(prevPos);
+
                     myPlayerRef.update({ x: localPlayerMesh.position.x, z: localPlayerMesh.position.z, angle: localPlayerMesh.rotation.y });
                 }
-                controls.target.lerp(localPlayerMesh.position, 0.1);
             }
 
+            // Sincronizzazione remoti
             Object.values(remotePlayers).forEach(p => {
                 p.mesh.position.lerp(p.target, 0.2);
                 p.mesh.rotation.y = THREE.MathUtils.lerp(p.mesh.rotation.y, p.tAngle, 0.2);
             });
 
-            controls.update();
-            composer.render();
+            if(composer) composer.render();
         }
 
-        function loggar(m, id) {
-            const l = document.getElementById('log');
-            l.innerHTML = `<div><span style="color:${TEAM_DATA[id].color}">${TEAM_DATA[id].n}:</span> ${m}</div>` + l.innerHTML;
+        function syncGame(state) {
+            Object.keys(state).forEach(s => {
+                if (s !== mySlot && s.startsWith('p')) {
+                    if (!remotePlayers[s]) {
+                        const m = createHuman(state[s].charKey);
+                        scene.add(m);
+                        remotePlayers[s] = { mesh: m, target: new THREE.Vector3(), tAngle: 0 };
+                    }
+                    remotePlayers[s].target.set(state[s].x, 0, state[s].z);
+                    remotePlayers[s].tAngle = state[s].angle;
+                }
+            });
         }
 
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
+        function setupJoystick() {
+            const zone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            const handle = (e) => {
+                const t = e.touches ? e.touches[0] : e;
+                const r = zone.getBoundingClientRect();
+                const dx = t.clientX - (r.left + 65);
+                const dy = t.clientY - (r.top + 65);
+                const d = Math.min(Math.hypot(dx,dy), 50);
+                const a = Math.atan2(dy,dx);
+                knob.style.transform = `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px)`;
+                joystickVector = { x: (Math.cos(a)*d)/50, y: (Math.sin(a)*d)/50 };
+            };
+            zone.addEventListener('touchstart', e => { e.preventDefault(); });
+            window.addEventListener('touchmove', handle);
+            window.addEventListener('mousemove', e => { if(e.buttons) handle(e); });
+            window.addEventListener('touchend', () => { joystickVector = {x:0,y:0}; knob.style.transform = ''; });
+            window.addEventListener('mouseup', () => { joystickVector = {x:0,y:0}; knob.style.transform = ''; });
         }
 
-        window.onload = initApp;
+        function attacca() {
+            const ev = db.ref(`${ROOM_PATH}/events`).push();
+            ev.set({ type: 'laser', from: mySlot });
+            setTimeout(() => ev.remove(), 500);
+        }
+
+        initApp();
     </script>
 </body>
 </html>
