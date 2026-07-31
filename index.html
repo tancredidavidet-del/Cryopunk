@@ -3,71 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK 3D: SYNTHWAVE EDITION</title>
+    <title>CRYOPUNK: BRAWL EDITION</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-        body { font-family: 'Share Tech Mono', monospace; background: #000; margin: 0; overflow: hidden; color: #e5e5e5; }
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@900&family=Share+Tech+Mono&display=swap');
+        
+        body { font-family: 'Kanit', sans-serif; background: #222; margin: 0; overflow: hidden; }
         canvas { display: block; position: fixed; inset: 0; z-index: 1; }
-        @media (min-width: 768px) { #ui-layer, canvas { max-width: 450px; left: 50% !important; transform: translateX(-50%); } }
-        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; padding: 15px; }
+        
+        /* UI Layer */
+        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; }
         .ui-layer * { pointer-events: auto; }
-        .cyber-panel { background: rgba(10, 5, 25, 0.85); backdrop-filter: blur(10px); border-left: 5px solid #bc6ff1; border: 1px solid rgba(188, 111, 241, 0.2); border-radius: 0 20px 20px 0; }
-        .selection-screen { position: fixed; inset: 0; z-index: 500; background: #050208; display: flex; flex-direction: column; padding: 25px; overflow-y: auto; }
-        .char-card { transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; background: rgba(255,255,255,0.02); margin-bottom: 12px; padding: 16px; border-radius: 15px; }
-        .char-card.occupied { opacity: 0.3; filter: grayscale(1); pointer-events: none; border-color: #ff2e63; }
-        .char-card:not(.occupied):hover { border-color: #bc6ff1; background: rgba(188, 111, 241, 0.1); }
-        .log-msg { border-left: 2px solid #555; padding-left: 8px; margin-bottom: 4px; font-size: 9px; }
+
+        /* HUD Stile Brawl */
+        .brawl-bar { background: rgba(0,0,0,0.5); border: 4px solid #000; border-radius: 12px; overflow: hidden; height: 24px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+        .hp-fill { background: #4ef037; height: 100%; transition: width 0.3s; }
+        .pa-badge { background: #ffce00; border: 4px solid #000; color: #000; text-shadow: none; }
+
+        /* Schermata Selezione */
+        .selection-screen { position: fixed; inset: 0; z-index: 500; background: #3b82f6; display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; }
+        .char-card { background: #fff; border: 6px solid #000; border-radius: 20px; transition: 0.2s; cursor: pointer; width: 100%; max-width: 300px; margin-bottom: 15px; padding: 15px; display: flex; align-items: center; gap: 15px; }
+        .char-card.occupied { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+        .char-card:active { transform: translateY(4px); }
+
+        /* Controlli Movimento */
+        .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; }
+        .ctrl-btn { width: 55px; height: 55px; background: #fff; border: 4px solid #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 6px 0 #888; }
+        .ctrl-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #888; }
+        
+        .action-btns { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; }
+        .action-btn { background: #ff4747; color: white; border: 4px solid #000; padding: 15px 30px; border-radius: 50px; font-weight: 900; box-shadow: 0 6px 0 #b32d2d; }
     </style>
 </head>
 <body>
 
     <div id="selection-screen" class="selection-screen">
-        <h1 class="text-purple-500 text-3xl font-black italic mb-1 uppercase tracking-tighter">Cryopunk Online</h1>
-        <p class="text-neutral-500 text-[10px] mb-6 uppercase tracking-widest border-b border-purple-900/30 pb-2">Manifesto Equipaggio // Sincronizzazione Audio-Bio</p>
-        <div id="char-grid"></div>
-        <p class="text-[8px] text-neutral-600 mt-8 text-center uppercase italic">Clicca un ruolo per attivare il collegamento neurale e la musica.</p>
+        <h1 class="text-white text-5xl font-black italic mb-8 uppercase tracking-tighter" style="-webkit-text-stroke: 3px #000;">SCEGLI EROE</h1>
+        <div id="char-grid" class="w-full flex flex-col items-center"></div>
     </div>
 
     <div id="game-ui" class="ui-layer hidden">
-        <header class="flex justify-between items-center bg-neutral-900/90 p-4 rounded-2xl border border-white/10 mb-4">
-            <div>
-                <div id="my-tag" class="text-[11px] font-black text-purple-400 uppercase italic tracking-widest">---</div>
-                <div id="hp-display" class="text-[8px] text-emerald-400 font-bold mt-1 uppercase italic">Sync: 100%</div>
-            </div>
-            <div class="text-right">
-                <span id="pa-display" class="text-4xl font-black text-amber-500 leading-none">4</span>
-                <span class="text-[8px] text-neutral-500 block font-bold uppercase">PA</span>
-            </div>
-        </header>
-
-        <main class="flex-1 flex flex-col justify-end space-y-3">
-            <section class="cyber-panel p-5">
-                <h2 id="room-name" class="text-sm font-black text-white uppercase tracking-tighter mb-1 italic">---</h2>
-                <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button onclick="fruga()" class="bg-white/5 border border-white/10 py-3 rounded-lg text-[9px] font-black uppercase text-white hover:bg-white/10 transition">🔍 Scansione</button>
-                    <button onclick="attacca()" id="btn-atk" class="bg-red-900/40 border border-red-500 text-red-500 py-3 rounded-lg text-[9px] font-black hidden animate-pulse">⚔️ Attacca</button>
+        <!-- TOP HUD -->
+        <div class="p-4 flex justify-between items-start">
+            <div class="w-1/2">
+                <div id="char-name" class="text-white text-xl italic uppercase mb-1" style="-webkit-text-stroke: 1px #000;">---</div>
+                <div class="brawl-bar w-full">
+                    <div id="hp-fill" class="hp-fill" style="width: 100%"></div>
                 </div>
-            </section>
-            <div id="log" class="h-32 bg-black/80 rounded-xl p-3 overflow-y-auto font-mono border border-white/5 text-[9px]"></div>
-            <div id="move-ui" class="grid grid-cols-1 gap-1.5 pb-24"></div>
-        </main>
+            </div>
+            <div class="pa-badge px-4 py-1 rounded-xl flex flex-col items-center">
+                <span class="text-[10px] font-black uppercase">Energia</span>
+                <span id="pa-display" class="text-3xl font-black">4</span>
+            </div>
+        </div>
 
-        <footer class="fixed bottom-6 left-6 right-6 max-w-[400px]">
-            <button onclick="passaTurno()" class="w-full bg-white text-black font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all">Termina Ciclo</button>
-        </footer>
-    </div>
+        <!-- MOVIMENTO (D-PAD) -->
+        <div class="d-pad">
+            <div></div>
+            <button class="ctrl-btn" onclick="muoviti('avanti')">▲</button>
+            <div></div>
+            <button class="ctrl-btn" onclick="ruota('sinistra')">◀</button>
+            <button class="ctrl-btn" onclick="muoviti('indietro')">▼</button>
+            <button class="ctrl-btn" onclick="ruota('destra')">▶</button>
+        </div>
 
-    <div id="ad-scr" class="fixed inset-0 bg-black/98 z-[1000] hidden flex flex-col items-center justify-center text-center">
-        <div id="ad-count" class="text-8xl font-black text-white mb-2 italic">15</div>
-        <p class="text-[10px] text-purple-400 font-bold uppercase tracking-[0.5em]">Spot di Sincronizzazione...</p>
+        <!-- AZIONI -->
+        <div class="action-btns">
+            <button class="action-btn" onclick="fruga()">🔍 SCAN</button>
+            <button class="action-btn bg-yellow-400 !border-yellow-900 !text-black !box-shadow-none" style="box-shadow: 0 6px 0 #a18600;" onclick="passaTurno()">FINE TURNO</button>
+        </div>
+        
+        <div id="log" class="fixed top-24 left-4 right-4 h-12 overflow-hidden text-white text-[10px] uppercase font-bold italic pointer-events-none opacity-80"></div>
     </div>
 
     <script>
-        // --- 1. CONFIGURAZIONE FIREBASE ---
+        // CONFIG FIREBASE (Sostituisci con la tua chiave)
         const firebaseConfig = {
             apiKey: "AIzaSyDzCp1PWbf82SfvhpZyXViK0Klf8rgDOcc",
             databaseURL: "https://cryopunk-90f36-default-rtdb.europe-west1.firebasedatabase.app/",
@@ -76,112 +89,111 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 2. MOTORE MUSICALE (SYNTHWAVE) ---
-        let audioCtx;
-        function startMusic() {
-            if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            const masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0.15; // Volume basso come richiesto
-            masterGain.connect(audioCtx.destination);
-
-            // Basso Pulsante (Electro Pulse)
-            setInterval(() => {
-                const osc = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(55, audioCtx.currentTime); // Nota La bassa
-                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-                osc.connect(g);
-                g.connect(masterGain);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
-            }, 500); // Ritmo 4/4
-
-            // Pad Atmosferico (Ambient Memory)
-            const playPad = (freq) => {
-                const osc = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                g.gain.setValueAtTime(0, audioCtx.currentTime);
-                g.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 2);
-                g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 4);
-                osc.connect(g);
-                g.connect(masterGain);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 4);
-            };
-
-            setInterval(() => {
-                const notes = [110, 130, 165]; // Accordi minori
-                playPad(notes[Math.floor(Math.random() * notes.length)]);
-            }, 3000);
-        }
-
-        // --- 3. DATI GIOCO ---
         const TEAM_DATA = {
-            dave: { n: "DAVE-RIG", r: "Ingegnere", color: "#fbbf24", catch: "Interessante.", hair: 0x000000, body: "normal" },
-            jonny: { n: "JONNY DARK", r: "Hacker", color: "#bc6ff1", catch: "Pessimo.", hair: 0x000000, body: "slim" },
-            ivan: { n: "IVAN-VOSTOK", r: "Soldato", color: "#ff2e63", catch: "Sì... tu farai carriera.", hair: 0x5d4037, body: "massive" },
-            sara: { n: "SARA-MED", r: "Biologa", color: "#10b981", catch: "Analisi terminata.", hair: 0x333333, body: "normal" },
-            axel: { n: "AXEL-01", r: "Androide", color: "#00d4ff", catch: "Efficienza calcolata.", hair: 0xcccccc, body: "android" }
-        };
-
-        const ROOMS = {
-            cryo: { n: "Cripta Criogenica", c: ['corr_a', 'corr_b'], p: {x:0, z:0} },
-            corr_a: { n: "Corridoio Nord", c: ['cryo', 'armeria', 'nodo'], p: {x:0, z:-30} },
-            corr_b: { n: "Condotto Ruggine", c: ['cryo', 'motori'], p: {x:30, z:0} },
-            armeria: { n: "Armeria Vostok", c: ['corr_a'], p: {x:-30, z:-30} },
-            nodo: { n: "Nodo Dati", c: ['cryo', 'armeria'], p: {x:30, z:-30} },
-            motori: { n: "Reattore Fuga", c: ['corr_b'], p: {x:30, z:30} }
+            dave: { n: "DAVE-RIG", color: "#fbbf24", hair: 0x000000, body: "normal", catch: "Interessante." },
+            jonny: { n: "JONNY DARK", color: "#bc6ff1", hair: 0x000000, body: "slim", catch: "Pessimo." },
+            ivan: { n: "IVAN-VOSTOK", color: "#ff2e63", hair: 0x5d4037, body: "massive", catch: "Si... farai carriera." },
+            sara: { n: "SARA-MED", color: "#10b981", hair: 0x333333, body: "normal", catch: "Analisi terminata." },
+            axel: { n: "AXEL-01", color: "#00d4ff", hair: 0xcccccc, body: "android", catch: "Efficienza 100%." }
         };
 
         let myId = null;
         let gameState = {};
-        let scene, camera, renderer, alienMesh;
-        let charMeshes = {};
+        let scene, camera, renderer, charMeshes = {};
         let pa = 4;
-        let targetRot = 0;
-        let curRot = 0;
 
-        // --- 4. MULTIPLAYER SYNC ---
+        // INIZIALIZZAZIONE 3D (Risoluzione Maggiore e Luce)
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x555555);
+            
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio); // Alta risoluzione
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Luci Brawl Style (Forti)
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            sun.position.set(10, 20, 10);
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+            // Griglia Pavimento chiara
+            const grid = new THREE.GridHelper(200, 40, 0x000000, 0x888888);
+            scene.add(grid);
+
+            // Creazione Eroi Grandi
+            Object.keys(TEAM_DATA).forEach(id => {
+                const char = TEAM_DATA[id];
+                const group = new THREE.Group();
+                
+                // Corpo (Scalato 2.5x per stile Brawl)
+                const bodyGeo = (id==='ivan') ? new THREE.BoxGeometry(3, 4, 2) : new THREE.BoxGeometry(2, 5, 1.5);
+                const body = new THREE.Mesh(bodyGeo, new THREE.MeshPhongMaterial({color: char.color}));
+                body.position.y = 2.5; 
+                group.add(body);
+
+                // Testa grande
+                const head = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshPhongMaterial({color: 0xffdbac}));
+                head.position.y = 5.5; 
+                group.add(head);
+
+                // Capelli Dave/Ivan
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 2), new THREE.MeshBasicMaterial({color: char.hair}));
+                hair.position.y = 6.2;
+                if(id === 'ivan') hair.rotation.z = 0.5;
+                group.add(hair);
+
+                scene.add(group);
+                charMeshes[id] = group;
+                
+                // Posizione iniziale
+                group.position.set(Math.random()*10 - 5, 0, Math.random()*10 - 5);
+            });
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (myId && charMeshes[myId]) {
+                const target = charMeshes[myId].position;
+                // Camera Isometrica (Stile Brawl)
+                camera.position.set(target.x, target.y + 25, target.z + 25);
+                camera.lookAt(target.x, target.y, target.z);
+            }
+            renderer.render(scene, camera);
+        }
+
+        // SINCRONIZZAZIONE FIREBASE
         db.ref('game').on('value', (snap) => {
             gameState = snap.val();
-            if (gameState) {
+            if (!gameState) initServer();
+            else {
                 if (!myId) updateSelectionUI();
-                else syncGame();
-            } else {
-                db.ref('game').set({
-                    alien: 'motori',
-                    players: {
-                        dave: { r: 'cryo', h: 100, s: 'LIBERO' },
-                        jonny: { r: 'nodo', h: 80, s: 'LIBERO' },
-                        ivan: { r: 'armeria', h: 150, s: 'LIBERO' },
-                        sara: { r: 'motori', h: 90, s: 'LIBERO' },
-                        axel: { r: 'corr_a', h: 200, s: 'LIBERO' }
-                    },
-                    adActive: false,
-                    logs: [{m: "SISTEMA ONLINE. MUSICA GENERATA.", c: "#555"}]
-                });
+                else syncPlayers();
             }
         });
+
+        function initServer() {
+            const initial = { players: {} };
+            Object.keys(TEAM_DATA).forEach(k => {
+                initial.players[k] = { x: 0, z: 0, rot: 0, h: 100, s: 'LIBERO' };
+            });
+            db.ref('game').set(initial);
+        }
 
         function updateSelectionUI() {
             const grid = document.getElementById('char-grid');
             grid.innerHTML = Object.keys(TEAM_DATA).map(key => {
-                const p = gameState.players[key];
-                const occupied = p.s !== 'LIBERO';
+                const occupied = gameState.players[key].s !== 'LIBERO';
                 return `
-                    <div class="char-card flex justify-between items-center ${occupied ? 'occupied' : ''}" onclick="pick('${key}')">
-                        <div>
-                            <div class="text-white font-black text-sm uppercase">${TEAM_DATA[key].n}</div>
-                            <div class="text-[8px] text-neutral-500 uppercase tracking-widest">${TEAM_DATA[key].r}</div>
-                        </div>
-                        <div class="text-[9px] font-black ${occupied ? 'text-red-500' : 'text-emerald-500'}">
-                            ${occupied ? 'IN USO' : 'SVEGLIA'}
+                    <div class="char-card ${occupied ? 'occupied' : ''}" onclick="pick('${key}')">
+                        <div class="w-12 h-12 rounded-full" style="background:${TEAM_DATA[key].color}"></div>
+                        <div class="flex-1">
+                            <div class="font-black text-lg uppercase">${TEAM_DATA[key].n}</div>
+                            <div class="text-xs text-blue-600 font-bold uppercase">${occupied ? 'In Partita' : 'Disponibile'}</div>
                         </div>
                     </div>
                 `;
@@ -189,144 +201,79 @@
         }
 
         function pick(id) {
-            startMusic();
             myId = id;
             db.ref(`game/players/${id}/s`).set('OCCUPATO');
             document.getElementById('selection-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'flex';
-            document.getElementById('my-tag').innerText = TEAM_DATA[id].n;
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('char-name').innerText = TEAM_DATA[id].n;
             init3D();
         }
 
-        function syncGame() {
-            const me = gameState.players[myId];
-            const room = ROOMS[me.r];
-            document.getElementById('room-name').innerText = room.n;
-            document.getElementById('hp-display').innerText = "INTEGRITÀ: " + me.h + "%";
-            document.getElementById('btn-atk').classList.toggle('hidden', gameState.alien !== me.r);
-            document.getElementById('ad-scr').style.display = gameState.adActive ? 'flex' : 'none';
-
-            const logDiv = document.getElementById('log');
-            logDiv.innerHTML = gameState.logs.slice(-12).reverse().map(l => `<div class="log-msg" style="border-color:${l.c}">${l.m}</div>`).join('');
-
-            Object.keys(gameState.players).forEach(pId => {
-                if(charMeshes[pId]) {
-                    const pRoom = ROOMS[gameState.players[pId].r];
-                    charMeshes[pId].position.set(pRoom.p.x, 0, pRoom.p.z);
-                    charMeshes[pId].visible = true;
+        function syncPlayers() {
+            Object.keys(gameState.players).forEach(id => {
+                const p = gameState.players[id];
+                if(charMeshes[id]) {
+                    charMeshes[id].position.x = p.x;
+                    charMeshes[id].position.z = p.z;
+                    charMeshes[id].rotation.y = p.rot;
                 }
             });
+            document.getElementById('hp-fill').style.width = gameState.players[myId].h + "%";
+        }
 
-            if(alienMesh) {
-                const aRoom = ROOMS[gameState.alien];
-                alienMesh.position.set(aRoom.p.x, 2, aRoom.p.z);
+        // MOVIMENTO MANUALE (1 PA per azione)
+        function muoviti(direzione) {
+            if(pa < 0.1) return;
+            const mesh = charMeshes[myId];
+            const step = 4; // Passo lungo stile brawl
+            
+            if(direzione === 'avanti') {
+                mesh.translateZ(-step);
+            } else {
+                mesh.translateZ(step);
             }
-
-            document.getElementById('move-ui').innerHTML = room.c.map(dest => `
-                <button onclick="muoviti('${dest}')" class="bg-white/5 border border-white/10 p-4 rounded-xl text-left text-[9px] font-black text-white flex justify-between active:scale-95 transition-all">
-                    <span>SPOSTATI IN >> ${ROOMS[dest].n}</span> <span class="text-purple-500">>></span>
-                </button>
-            `).join('');
+            
+            pa -= 0.5; // Ogni passo consuma mezzo PA
+            updateDatabase();
         }
 
-        // --- ENGINE 3D ---
-        function init3D() {
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.03);
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+        function ruota(dir) {
+            const mesh = charMeshes[myId];
+            if(dir === 'sinistra') mesh.rotation.y += 0.5;
+            else mesh.rotation.y -= 0.5;
+            updateDatabase();
+        }
 
-            const ambient = new THREE.AmbientLight(0x404040, 1.2);
-            scene.add(ambient);
-
-            Object.values(ROOMS).forEach(r => {
-                const floor = new THREE.Mesh(new THREE.BoxGeometry(22, 0.5, 22), new THREE.MeshPhongMaterial({color: 0x0a0a0a}));
-                floor.position.set(r.p.x, -1, r.p.z);
-                scene.add(floor);
-                const light = new THREE.PointLight(0xbc6ff1, 0.7, 40);
-                light.position.set(r.p.x, 10, r.p.z);
-                scene.add(light);
+        function updateDatabase() {
+            document.getElementById('pa-display').innerText = Math.floor(pa);
+            db.ref(`game/players/${myId}`).update({
+                x: charMeshes[myId].position.x,
+                z: charMeshes[myId].position.z,
+                rot: charMeshes[myId].rotation.y
             });
-
-            Object.keys(TEAM_DATA).forEach(id => {
-                const char = TEAM_DATA[id];
-                const group = new THREE.Group();
-                const bodyGeo = (id==='ivan') ? new THREE.BoxGeometry(2, 3, 1.2) : new THREE.BoxGeometry(1, 3.5, 0.8);
-                const body = new THREE.Mesh(bodyGeo, new THREE.MeshPhongMaterial({color: char.color}));
-                body.position.y = 1.7; group.add(body);
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshPhongMaterial({color: 0xffdbac}));
-                head.position.y = 3.8; group.add(head);
-                const hair = new THREE.Mesh(new THREE.BoxGeometry(1, 0.3, 1), new THREE.MeshBasicMaterial({color: char.hair}));
-                hair.position.y = 4.2; if(id==='ivan') hair.rotation.z = 0.5;
-                group.add(hair);
-                scene.add(group);
-                charMeshes[id] = group;
-                group.visible = false;
-            });
-
-            alienMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 0), new THREE.MeshPhongMaterial({color: 0x000000, wireframe: true}));
-            scene.add(alienMesh);
-
-            setupControls();
-            animate();
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            curRot += (targetRot - curRot) * 0.1;
-            const r = ROOMS[gameState.players[myId].r];
-            camera.position.x = r.p.x + Math.sin(curRot) * 15;
-            camera.position.z = r.p.z + Math.cos(curRot) * 15;
-            camera.position.y = 8;
-            camera.lookAt(r.p.x, 2, r.p.z);
-            if(alienMesh) alienMesh.rotation.y += 0.05;
-            renderer.render(scene, camera);
-        }
-
-        function setupControls() {
-            let drag = false; let lx = 0;
-            const start = (e) => { drag = true; lx = e.touches ? e.touches[0].clientX : e.clientX; };
-            const move = (e) => { if(drag) { let x = e.touches ? e.touches[0].clientX : e.clientX; targetRot -= (x - lx) * 0.01; lx = x; }};
-            window.addEventListener('mousedown', start); window.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drag = false);
-            window.addEventListener('touchstart', start); window.addEventListener('touchmove', move); window.addEventListener('touchend', () => drag = false);
-        }
-
-        // --- AZIONI ---
-        function muoviti(d) {
-            if(pa < 1) return;
-            pa--; document.getElementById('pa-display').innerText = pa;
-            db.ref(`game/players/${myId}/r`).set(d);
-            if(myId === 'dave') logEvent(TEAM_DATA.dave.catch, TEAM_DATA.dave.color, TEAM_DATA.dave.n);
         }
 
         function passaTurno() {
-            if(myId === 'ivan') logEvent(TEAM_DATA.ivan.catch, TEAM_DATA.ivan.color, TEAM_DATA.ivan.n);
-            if(myId === 'jonny') logEvent(TEAM_DATA.jonny.catch, TEAM_DATA.jonny.color, TEAM_DATA.jonny.n);
-
-            db.ref('game/adActive').set(true);
-            let s = 15;
-            const t = setInterval(() => {
-                s--;
-                if(s <= 0) {
-                    clearInterval(t);
-                    db.ref('game/adActive').set(false);
-                    pa = 4; document.getElementById('pa-display').innerText = pa;
-                    if(myId === 'dave') {
-                        const poss = ROOMS[gameState.alien].c;
-                        db.ref('game/alien').set(poss[Math.floor(Math.random()*poss.length)]);
-                    }
-                }
-            }, 1000);
+            pa = 4;
+            document.getElementById('pa-display').innerText = pa;
+            // Mostra frasi tipiche Ivan/Jonny nel log rapido
+            const msg = (myId === 'ivan') ? TEAM_DATA.ivan.catch : (myId === 'jonny' ? TEAM_DATA.jonny.catch : "Turno concluso.");
+            document.getElementById('log').innerHTML = `> ${TEAM_DATA[myId].n}: "${msg}"`;
+            setTimeout(() => document.getElementById('log').innerHTML = "", 3000);
         }
 
-        function logEvent(msg, color, name) {
-            const newLog = { m: `<span style="color:${color}">${name}:</span> "${msg}"`, c: color };
-            let currentLogs = gameState.logs || [];
-            currentLogs.push(newLog);
-            db.ref('game/logs').set(currentLogs.slice(-15));
+        function fruga() {
+            if(pa < 1) return;
+            pa--;
+            document.getElementById('pa-display').innerText = pa;
+            if(myId === 'dave') document.getElementById('log').innerHTML = `> DAVE-RIG: "Interessante..."`;
         }
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
     </script>
 </body>
 </html>
