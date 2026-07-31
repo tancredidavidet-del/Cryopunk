@@ -3,54 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK: COLD AWAKENING</title>
+    <title>CRYOPUNK: ANTEPRIMA TATTICA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
-        body { font-family: sans-serif; background: #000; margin: 0; overflow: hidden; touch-action: none; }
-        canvas { display: block; position: fixed; inset: 0; z-index: 1; }
-        .hud { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: flex; flex-direction: column; padding: 15px; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        #c3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; display: flex; flex-direction: column; padding: 20px; }
         .hud * { pointer-events: auto; }
-        .selection-overlay { position: fixed; inset: 0; z-index: 1000; background: linear-gradient(to bottom, #111, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .milit-card { width: 100%; max-width: 350px; padding: 20px; border: 2px solid #333; margin-bottom: 10px; cursor: pointer; background: #1a1a1a; color: #fff; border-radius: 8px; }
-        .milit-card:active { background: #333; transform: scale(0.98); }
+        .selection-screen { position: fixed; inset: 0; z-index: 100; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-char { width: 280px; padding: 20px; margin: 10px; background: #1a1a1a; border: 2px solid #333; color: white; border-radius: 12px; cursor: pointer; text-align: center; }
+        .btn-char:hover { border-color: #0f0; background: #222; }
         .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; }
-        .btn-c { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; touch-action: none; }
-        .btn-c.active { background: #0f0; }
+        .btn-ctrl { width: 70px; height: 70px; background: rgba(0,0,0,0.7); border: 2px solid #fff; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .btn-ctrl.active { background: #0f0; color: #000; }
+        .top-bar { background: rgba(0,0,0,0.8); border-left: 5px solid #0f0; padding: 15px; width: fit-content; color: white; border-radius: 0 10px 10px 0; }
     </style>
 </head>
 <body>
 
-    <!-- SCHERMATA SELEZIONE (Sempre visibile all'inizio) -->
-    <div id="selection-screen" class="selection-overlay">
-        <h1 class="text-white text-3xl font-black mb-1 uppercase tracking-widest" style="font-family: 'Orbitron';">CRYOPUNK</h1>
-        <p id="db-status" class="text-emerald-500 text-[10px] mb-8 uppercase tracking-[0.2em]">Sincronizzazione in corso...</p>
-        
-        <div id="char-grid" class="w-full flex flex-col items-center">
-            <!-- Caso di emergenza: se Firebase fallisce, questi appaiono comunque -->
-            <div class="milit-card" onclick="pick('dave')">DAVE-RIG <span class="text-[8px] opacity-50 float-right">INGEGNERE</span></div>
-            <div class="milit-card" onclick="pick('ivan')">IVAN-VOSTOK <span class="text-[8px] opacity-50 float-right">ASSALTO</span></div>
-            <div class="milit-card" onclick="pick('jonny')">JONNY DARK <span class="text-[8px] opacity-50 float-right">HACKER</span></div>
-        </div>
+    <div id="c3d"></div>
+
+    <!-- SELEZIONE -->
+    <div id="selection-screen" class="selection-screen">
+        <h1 style="font-family: 'Orbitron'; color: white; font-size: 2rem; margin-bottom: 30px; letter-spacing: 5px;">CRYOPUNK</h1>
+        <div class="btn-char" onclick="pick('dave')">DAVE-RIG <br><span style="font-size: 10px; color: #888;">INGEGNERE (ALTO / CAPELLI NERI)</span></div>
+        <div class="btn-char" onclick="pick('ivan')">IVAN-VOSTOK <br><span style="font-size: 10px; color: #888;">ASSALTO (MASSICCIO / CAPELLI MARRONI)</span></div>
+        <div class="btn-char" onclick="pick('jonny')">JONNY DARK <br><span style="font-size: 10px; color: #888;">HACKER (SLANCIATO)</span></div>
     </div>
 
-    <!-- HUD GIOCO -->
-    <div id="game-hud" class="hud hidden">
-        <div class="bg-black/80 border-l-4 border-emerald-500 p-3 w-56">
-            <div id="p-name" class="text-white font-bold text-[10px] uppercase">---</div>
-            <div class="text-[7px] text-emerald-500 font-bold mt-1 uppercase italic">Operativo // 60 FPS</div>
+    <!-- UI GIOCO -->
+    <div id="game-ui" class="hud" style="display: none;">
+        <div class="top-bar">
+            <div id="p-name" style="font-weight: 900; letter-spacing: 2px; font-size: 12px;">UNIT: ---</div>
+            <div style="font-size: 9px; color: #0f0; margin-top: 5px;">SISTEMA OPERATIVO // 60 FPS</div>
         </div>
 
         <div class="d-pad">
-            <div></div><button class="btn-c" id="up">▲</button><div></div>
-            <button class="btn-c" id="left">◀</button>
-            <button class="btn-c" id="down">▼</button>
-            <button class="btn-c" id="right">▶</button>
+            <div></div><button class="btn-ctrl" id="up">▲</button><div></div>
+            <button class="btn-ctrl" id="left">◀</button>
+            <button class="btn-ctrl" id="down">▼</button>
+            <button class="btn-ctrl" id="right">▶</button>
         </div>
-        <button style="position:fixed; bottom:30px; right:30px; width:80px; height:80px; background:#f00; border-radius:50%; color:#fff; font-size:10px; font-weight:bold;" onclick="location.reload()">LOGOUT</button>
+        
+        <button onclick="location.reload()" style="position:fixed; bottom:30px; right:30px; width:80px; height:80px; background:#f00; border-radius:50%; color:white; font-weight:bold; font-size:10px; border:3px solid #fff;">LOGOUT</button>
     </div>
 
     <script>
@@ -60,98 +59,96 @@
             databaseURL: "https://cryopunk-90f36-default-rtdb.europe-west1.firebasedatabase.app/",
             projectId: "cryopunk-90f36",
         };
-        
-        let db;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-        } catch(e) { console.log("Firebase Offline Mode"); }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        const TEAM = {
-            dave: { n: "DAVE-RIG", h: 4.8, w: 0.9, color: 0x999999, hair: 0x000000 },
-            ivan: { n: "IVAN-VOSTOK", h: 4.0, w: 2.2, color: 0x444444, hair: 0x5d4037 },
-            jonny: { n: "JONNY DARK", h: 4.2, w: 1.0, color: 0x222222, hair: 0x000000 }
-        };
+        let myId = null, scene, camera, renderer, clock = new THREE.Clock();
+        let charMeshes = {}, input = {up: false, down: false, left: false, right: false};
 
-        let myId = null, gameState = { players: {} }, scene, camera, renderer, charMeshes = {}, input = { up: false, down: false, left: false, right: false }, clock = new THREE.Clock();
-
-        // 1. GESTIONE DATABASE
-        if(db) {
-            db.ref('game').on('value', (snap) => {
-                const data = snap.val();
-                if(data) {
-                    gameState = data;
-                    document.getElementById('db-status').innerText = "Database Online // Sincronizzato";
-                    updateUISelection();
-                } else {
-                    // Inizializza se vuoto
-                    let ps = {};
-                    Object.keys(TEAM).forEach(k => ps[k] = {x:0, z:0, r:0, s:'LIBERO', lastSeen:0});
-                    db.ref('game').set({ players: ps });
-                }
-            });
-        }
-
-        function updateUISelection() {
-            const grid = document.getElementById('char-grid');
-            grid.innerHTML = Object.keys(TEAM).map(k => {
-                const p = gameState.players[k] || {s:'LIBERO'};
-                const isOccupied = (p.s === 'OCCUPATO' && (Date.now() - (p.lastSeen || 0) < 6000));
-                return `<div class="milit-card" style="${isOccupied ? 'opacity:0.3;pointer-events:none;' : ''}" onclick="pick('${k}')">
-                    <span class="font-bold">${TEAM[k].n}</span>
-                    <span class="float-right text-[8px] mt-1">${isOccupied ? '[ IN USO ]' : '[ DISPONIBILE ]'}</span>
-                </div>`;
-            }).join('');
-        }
-
-        // 2. LOGICA 3D
         function init3D() {
+            // SCENA E COLORE DI SICUREZZA (SE VEDI GRIGIO IL MOTORE È OK)
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x222222); // Grigio scuro per vedere se carica
+            scene.background = new THREE.Color(0x1a1a1a); 
 
-            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.set(0, 50, 50);
-
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
-            document.body.appendChild(renderer.domElement);
+            document.getElementById('c3d').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.9)); // Luce fortissima
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(10, 50, 10);
-            scene.add(sun);
+            // LUCI MASSIVE
+            const ambient = new THREE.AmbientLight(0xffffff, 1);
+            scene.add(ambient);
+            const directional = new THREE.DirectionalLight(0xffffff, 1);
+            directional.position.set(10, 50, 10);
+            scene.add(directional);
 
-            // Pavimento
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            // PAVIMENTO CON GRIGLIA
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(1000, 1000),
+                new THREE.MeshStandardMaterial({ color: 0x222222 })
+            );
             ground.rotation.x = -Math.PI / 2;
             scene.add(ground);
-            scene.add(new THREE.GridHelper(1000, 50, 0x00ff00, 0x555555));
+            
+            const grid = new THREE.GridHelper(1000, 100, 0x00ff00, 0x444444);
+            scene.add(grid);
 
-            // Creazione Personaggi
-            Object.keys(TEAM).forEach(id => {
-                const d = TEAM[id];
+            // CREAZIONE MODELLI FISICI
+            const team = {
+                dave: { color: 0xfbbf24, h: 5.0, w: 1.0, hair: 0x000000 },
+                ivan: { color: 0xff4444, h: 4.0, w: 2.2, hair: 0x5d4037 },
+                jonny: { color: 0xbc6ff1, h: 4.2, w: 1.1, hair: 0x000000 }
+            };
+
+            Object.keys(team).forEach(id => {
+                const d = team[id];
                 const group = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.CapsuleGeometry(d.w, d.h, 4, 8), new THREE.MeshStandardMaterial({color: d.color}));
-                body.position.y = d.h;
+                
+                // Corpo
+                const body = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(d.w * 0.5, d.h * 0.6, 8, 16),
+                    new THREE.MeshStandardMaterial({color: d.color})
+                );
+                body.position.y = d.h * 0.7;
                 group.add(body);
+
+                // Testa
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 16, 16),
+                    new THREE.MeshStandardMaterial({color: 0xffdbac})
+                );
+                head.position.y = d.h * 1.35;
+                group.add(head);
+
+                // Capelli
+                const hair = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.7, 0.2, 0.7),
+                    new THREE.MeshBasicMaterial({color: d.hair})
+                );
+                hair.position.y = d.h * 1.5;
+                if(id==='ivan') hair.rotation.z = 0.5;
+                group.add(hair);
+
                 scene.add(group);
                 charMeshes[id] = group;
+                group.position.set(id === 'ivan' ? 10 : (id === 'jonny' ? -10 : 0), 0, 0);
             });
 
-            setupControls();
+            setupInput();
             loop();
         }
 
-        function setupControls() {
-            const keys = ['up', 'down', 'left', 'right'];
-            keys.forEach(k => {
-                const el = document.getElementById(k);
-                const start = (e) => { e.preventDefault(); input[k] = true; el.style.background = "#0f0"; };
-                const stop = (e) => { e.preventDefault(); input[k] = false; el.style.background = "rgba(255,255,255,0.2)"; };
-                el.addEventListener('touchstart', start); el.addEventListener('touchend', stop);
+        function setupInput() {
+            const bind = (id, key) => {
+                const el = document.getElementById(id);
+                const start = (e) => { e.preventDefault(); input[key] = true; el.classList.add('active'); };
+                const stop = (e) => { e.preventDefault(); input[key] = false; el.classList.remove('active'); };
                 el.addEventListener('mousedown', start); el.addEventListener('mouseup', stop);
-            });
+                el.addEventListener('touchstart', start); el.addEventListener('touchend', stop);
+            };
+            bind('up', 'up'); bind('down', 'down'); bind('left', 'left'); bind('right', 'right');
         }
 
         function loop() {
@@ -160,37 +157,44 @@
 
             if (myId && charMeshes[myId]) {
                 const m = charMeshes[myId];
-                const speed = 35 * delta;
+                const speed = 30 * delta;
+                const rSpeed = 4 * delta;
+
                 if (input.up) m.translateZ(-speed);
                 if (input.down) m.translateZ(speed);
-                if (input.left) m.rotation.y += 4 * delta;
-                if (input.right) m.rotation.y -= 4 * delta;
+                if (input.left) m.rotation.y += rSpeed;
+                if (input.right) m.rotation.y -= rSpeed;
 
-                // Sync Firebase
-                if (db && clock.elapsedTime % 0.1 < 0.02) {
+                // Sync Database (Heartbeat incluso)
+                if (clock.elapsedTime % 0.05 < 0.02) {
                     db.ref(`game/players/${myId}`).update({
                         x: m.position.x, z: m.position.z, r: m.rotation.y, lastSeen: Date.now(), s: 'OCCUPATO'
                     });
                 }
 
-                // Camera Follow REAR-HIGH
+                // CAMERA REAR-HIGH (Inclinata e stabile)
                 m.updateMatrixWorld();
-                const offset = new THREE.Vector3(0, 25, 40).applyMatrix4(m.matrixWorld);
+                const offset = new THREE.Vector3(0, 22, 38).applyMatrix4(m.matrixWorld);
                 camera.position.lerp(offset, 0.1);
-                camera.lookAt(m.position.x, 5, m.position.z);
+                camera.lookAt(m.position.x, 2, m.position.z);
             }
+
             renderer.render(scene, camera);
         }
 
         function pick(id) {
             myId = id;
-            if(db) {
-                db.ref(`game/players/${id}`).update({ s: 'OCCUPATO', lastSeen: Date.now() });
-                setInterval(() => db.ref(`game/players/${myId}/lastSeen`).set(Date.now()), 2000);
-            }
             document.getElementById('selection-screen').style.display = 'none';
-            document.getElementById('game-hud').style.display = 'block';
-            document.getElementById('p-name').innerText = "UNIT: " + TEAM[id].n;
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('p-name').innerText = "UNIT: " + id.toUpperCase();
+            
+            // Inizializza Heartbeat su Firebase
+            db.ref(`game/players/${id}`).update({ s: 'OCCUPATO', lastSeen: Date.now() });
+            setInterval(() => {
+                db.ref(`game/players/${myId}/lastSeen`).set(Date.now());
+            }, 2000);
+            db.ref(`game/players/${id}`).onDisconnect().update({ s: 'LIBERO' });
+
             init3D();
         }
 
