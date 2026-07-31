@@ -3,52 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK: ULTRA REALISM 60FPS</title>
+    <title>CRYOPUNK: TACTICAL RECON</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=Share+Tech+Mono&display=swap');
-        body { font-family: 'Share Tech Mono', monospace; background: #000; margin: 0; overflow: hidden; }
-        canvas { display: block; filter: contrast(1.1) brightness(1.1); }
-        .hud { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: flex; flex-direction: column; padding: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
+        body { font-family: 'Share Tech Mono', monospace; background: #000; margin: 0; overflow: hidden; touch-action: none; -webkit-user-select: none; }
+        canvas { display: block; position: absolute; inset: 0; z-index: 1; }
+        
+        /* UI OVERLAY */
+        .hud { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: flex; flex-direction: column; padding: 15px; }
         .hud * { pointer-events: auto; }
         
-        /* SELEZIONE REALISTICA */
-        .selection-overlay { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(circle at center, #111, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .milit-card { width: 100%; max-width: 400px; padding: 25px; border: 2px solid #333; margin-bottom: 12px; cursor: pointer; transition: 0.2s; position: relative; background: rgba(255,255,255,0.02); }
-        .milit-card:hover { border-color: #0f0; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
-        .milit-card.occupied { opacity: 0.4; filter: grayscale(1); pointer-events: none; border-color: #f00; }
+        /* SELEZIONE */
+        .selection-overlay { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .milit-card { width: 100%; max-width: 380px; padding: 20px; border: 1px solid #333; margin-bottom: 8px; cursor: pointer; background: #0a0a0a; transition: 0.2s; }
+        .milit-card:hover { border-color: #0f0; }
+        .milit-card.occupied { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+
+        /* CONTROLLI TOUCH */
+        .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 75px); gap: 10px; }
+        .btn-c { width: 75px; height: 75px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); border-radius: 15px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; touch-action: none; }
+        .btn-c.active { background: #0f0; border-color: #fff; color: #000; box-shadow: 0 0 20px #0f0; }
         
-        /* CONTROLLI PROFESSIONALI */
-        .d-pad { position: fixed; bottom: 40px; left: 40px; display: grid; grid-template-columns: repeat(3, 75px); gap: 12px; }
-        .btn-c { width: 75px; height: 75px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; touch-action: none; transition: 0.1s; }
-        .btn-c.active { background: #0f0; color: #000; border-color: #0f0; transform: scale(0.9); }
-        
-        .status-panel { background: rgba(0,0,0,0.85); border-left: 5px solid #0f0; padding: 15px; border-radius: 0 10px 10px 0; }
-        .btn-fire { position: fixed; bottom: 40px; right: 40px; width: 110px; height: 110px; background: radial-gradient(#f00, #900); border: 4px solid #fff; border-radius: 50%; color: #fff; font-family: 'Big Shoulders Display'; font-size: 24px; font-weight: 900; box-shadow: 0 10px 30px rgba(255,0,0,0.4); }
+        .status-box { background: rgba(0,0,0,0.8); border-left: 4px solid #0f0; padding: 12px; }
+        .btn-exit { position: fixed; bottom: 30px; right: 30px; width: 90px; height: 90px; background: #f00; border: 3px solid #fff; border-radius: 50%; color: #fff; font-family: 'Orbitron'; font-size: 14px; font-weight: 900; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <!-- SELEZIONE EROE -->
+    <!-- SELEZIONE -->
     <div id="selection-screen" class="selection-overlay">
-        <h1 class="text-white text-4xl font-black mb-10 tracking-[0.4em] uppercase italic">GOLGOTHA-IV // OPERATIVES</h1>
+        <h1 class="text-white text-3xl font-black mb-1 uppercase italic tracking-tighter" style="font-family: 'Orbitron';">CRYOPUNK</h1>
+        <p class="text-emerald-500 text-[9px] mb-8 tracking-[0.4em] uppercase">Golgotha-IV // Tactical Sync</p>
         <div id="char-grid" class="w-full flex flex-col items-center"></div>
-        <p class="text-[9px] text-neutral-600 mt-10 uppercase tracking-widest">Sincronizzazione Heartbeat Attiva</p>
     </div>
 
-    <!-- HUD DI GIOCO -->
+    <!-- HUD -->
     <div id="game-hud" class="hud hidden">
-        <div class="flex justify-between">
-            <div class="status-panel w-64">
-                <div id="p-name" class="text-white font-black text-sm italic tracking-widest">UNIT: ---</div>
-                <div class="w-full h-1.5 bg-neutral-900 mt-2"><div id="hp-bar" class="h-full bg-emerald-500" style="width:100%"></div></div>
-                <div class="flex justify-between mt-2 text-[8px] font-bold text-emerald-400"><span>RES: 3840x2160</span><span id="fps-txt">60 FPS</span></div>
-            </div>
+        <div class="status-box w-56">
+            <div id="p-name" class="text-white font-black text-[11px] tracking-widest uppercase">---</div>
+            <div class="w-full h-1 bg-neutral-900 mt-2"><div id="hp-bar" class="h-full bg-emerald-500" style="width:100%"></div></div>
+            <div class="text-[7px] text-emerald-500 font-bold mt-1 uppercase">Stato: Operativo // 60FPS</div>
         </div>
 
+        <!-- D-PAD OTTIMIZZATO PER TOUCH -->
         <div class="d-pad">
             <div></div><button class="btn-c" id="up">▲</button><div></div>
             <button class="btn-c" id="left">◀</button>
@@ -56,11 +57,10 @@
             <button class="btn-c" id="right">▶</button>
         </div>
 
-        <button class="btn-fire" onclick="vittoria()">ESCIE</button>
+        <button class="btn-exit" onclick="location.reload()">LOGOUT</button>
     </div>
 
     <script>
-        // CONFIGURAZIONE FIREBASE (Usa la tua chiave qui)
         const firebaseConfig = {
             apiKey: "AIzaSyDzCp1PWbf82SfvhpZyXViK0Klf8rgDOcc",
             databaseURL: "https://cryopunk-90f36-default-rtdb.europe-west1.firebasedatabase.app/",
@@ -70,9 +70,9 @@
         const db = firebase.database();
 
         const TEAM = {
-            dave: { n: "DAVE-RIG", h: 4.5, w: 0.9, color: 0x999999, hair: 0x000000, role: "Ingegnere" },
-            ivan: { n: "IVAN-VOSTOK", h: 3.8, w: 2.2, color: 0x444444, hair: 0x5d4037, role: "Assalto" },
-            jonny: { n: "JONNY DARK", h: 4.0, w: 1.0, color: 0x111111, hair: 0x000000, role: "Hacker" }
+            dave: { n: "DAVE-RIG", h: 4.8, w: 0.9, color: 0xcccccc, hair: 0x000000 },
+            ivan: { n: "IVAN-VOSTOK", h: 4.0, w: 2.2, color: 0x444444, hair: 0x5d4037 },
+            jonny: { n: "JONNY DARK", h: 4.2, w: 1.0, color: 0x111111, hair: 0x000000 }
         };
 
         let myId = null;
@@ -81,68 +81,72 @@
         let input = { up: false, down: false, left: false, right: false };
         let clock = new THREE.Clock();
 
-        // --- ENGINE 3D HIGH RESOLUTION ---
         function init3D() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050505);
-            scene.fog = new THREE.Fog(0x050505, 20, 100);
 
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio > 1 ? 2 : 1); // Alta risoluzione Retina
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.2;
             document.body.appendChild(renderer.domElement);
 
-            // Luci Realistiche
-            scene.add(new THREE.AmbientLight(0xffffff, 0.2));
-            const mainLight = new THREE.DirectionalLight(0x00ffaa, 1.8);
-            mainLight.position.set(30, 60, 30);
-            mainLight.castShadow = true;
-            mainLight.shadow.mapSize.set(2048, 2048);
-            scene.add(mainLight);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            const sun = new THREE.DirectionalLight(0x00ffaa, 1.2);
+            sun.position.set(50, 100, 50);
+            sun.castShadow = true;
+            sun.shadow.mapSize.set(2048, 2048);
+            scene.add(sun);
 
-            // Terreno Riflettente
-            const ground = new THREE.Mesh(
-                new THREE.PlaneGeometry(1000, 1000),
-                new THREE.MeshStandardMaterial({ color: 0x080808, metalness: 0.8, roughness: 0.1 })
+            // AMBIENTE REALE
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(2000, 2000),
+                new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 })
             );
-            ground.rotation.x = -Math.PI/2;
-            ground.receiveShadow = true;
-            scene.add(ground);
+            floor.rotation.x = -Math.PI/2;
+            floor.receiveShadow = true;
+            scene.add(floor);
 
-            // Creazione Operativi
+            // Griglia Pavimento per orientamento
+            const grid = new THREE.GridHelper(1000, 100, 0x00ff00, 0x222222);
+            grid.position.y = 0.05;
+            scene.add(grid);
+
+            // OSTACOLI AMBIENTALI
+            for(let i=0; i<40; i++) {
+                const box = new THREE.Mesh(
+                    new THREE.BoxGeometry(8, 8, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1, roughness: 0.2 })
+                );
+                box.position.set(Math.random()*400-200, 4, Math.random()*400-200);
+                box.castShadow = true;
+                scene.add(box);
+            }
+
+            // CREAZIONE MODELLI
             Object.keys(TEAM).forEach(id => {
                 const d = TEAM[id];
                 const group = new THREE.Group();
-                
-                // Corpo PBR
                 const body = new THREE.Mesh(
-                    new THREE.CapsuleGeometry(d.w * 0.4, d.h * 0.6, 10, 20),
-                    new THREE.MeshStandardMaterial({color: d.color, metalness: 0.9, roughness: 0.4})
+                    new THREE.CapsuleGeometry(d.w * 0.45, d.h * 0.65, 8, 16),
+                    new THREE.MeshStandardMaterial({color: d.color, metalness: 0.8, roughness: 0.3})
                 );
-                body.position.y = d.h * 0.7;
+                body.position.y = d.h * 0.75;
                 body.castShadow = true;
                 group.add(body);
 
-                // Testa
                 const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.45, 20, 20),
-                    new THREE.MeshStandardMaterial({color: 0xffdbac, roughness: 0.8})
+                    new THREE.SphereGeometry(0.5, 16, 16),
+                    new THREE.MeshStandardMaterial({color: 0xffdbac})
                 );
-                head.position.y = d.h * 1.3;
+                head.position.y = d.h * 1.4;
                 group.add(head);
 
-                // Capelli (Dettaglio Dave/Ivan)
-                const hair = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.6, 0.2, 0.6),
-                    new THREE.MeshBasicMaterial({color: d.hair})
-                );
-                hair.position.y = d.h * 1.45;
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.25, 0.65), new THREE.MeshBasicMaterial({color: d.hair}));
+                hair.position.y = d.h * 1.55;
                 if(id==='ivan') hair.rotation.z = 0.5;
                 group.add(hair);
 
@@ -150,49 +154,58 @@
                 charMeshes[id] = group;
             });
 
-            bindInputs();
-            gameLoop();
+            bindControls();
+            loop();
         }
 
-        function bindInputs() {
+        function bindControls() {
             const keys = ['up', 'down', 'left', 'right'];
             keys.forEach(k => {
                 const el = document.getElementById(k);
                 const start = (e) => { e.preventDefault(); input[k] = true; el.classList.add('active'); };
                 const stop = (e) => { e.preventDefault(); input[k] = false; el.classList.remove('active'); };
-                el.addEventListener('mousedown', start); el.addEventListener('mouseup', stop);
-                el.addEventListener('touchstart', start); el.addEventListener('touchend', stop);
+                
+                el.addEventListener('touchstart', start, {passive: false});
+                el.addEventListener('touchend', stop, {passive: false});
+                el.addEventListener('mousedown', start);
+                el.addEventListener('mouseup', stop);
             });
         }
 
-        function gameLoop() {
-            requestAnimationFrame(gameLoop);
+        function loop() {
+            requestAnimationFrame(loop);
             const delta = clock.getDelta();
 
             if (myId && charMeshes[myId]) {
                 const m = charMeshes[myId];
-                const speed = 18 * delta; // Velocità calibrata 60fps
-                const rSpeed = 3.5 * delta;
+                const speed = 25 * delta; // 60fps Motion
+                const rSpeed = 4 * delta;
 
                 if (input.up) m.translateZ(-speed);
                 if (input.down) m.translateZ(speed);
                 if (input.left) m.rotation.y += rSpeed;
                 if (input.right) m.rotation.y -= rSpeed;
 
-                // Sync Database ogni 3 frame per non intasare
-                if (clock.elapsedTime % 0.05 < 0.02) syncToFirebase();
+                if (clock.elapsedTime % 0.05 < 0.02) {
+                    db.ref(`game/players/${myId}`).update({
+                        x: m.position.x, z: m.position.z, r: m.rotation.y, lastSeen: Date.now()
+                    });
+                }
 
-                // Camera Smooth Realistica
-                const offset = new THREE.Vector3(0, 12, 18).applyQuaternion(m.quaternion).add(m.position);
-                camera.position.lerp(offset, 0.1);
-                camera.lookAt(m.position.x, 3, m.position.z);
+                // CAMERA REAR-HIGH (Inclinata Alto Posteriore)
+                const relativeCameraOffset = new THREE.Vector3(0, 18, 28);
+                const cameraOffset = relativeCameraOffset.applyMatrix4(m.matrixWorld);
+                camera.position.lerp(cameraOffset, 0.1);
+                // Guarda un punto davanti al personaggio per vedere l'ambiente
+                const lookAtPos = m.position.clone();
+                lookAtPos.y = 4;
+                camera.lookAt(lookAtPos);
             }
 
-            // Interpolazione fluida amici
+            // Sync altri giocatori
             Object.keys(gameState.players || {}).forEach(id => {
                 if(id !== myId && charMeshes[id]) {
                     const p = gameState.players[id];
-                    // Se il giocatore è offline (heartbeat fallito), nascondi mesh
                     const isOnline = (Date.now() - p.lastSeen < 6000);
                     charMeshes[id].visible = isOnline;
                     if(isOnline) {
@@ -205,31 +218,27 @@
             renderer.render(scene, camera);
         }
 
-        // --- FIREBASE HEARTBEAT & SYNC ---
         db.ref('game').on('value', (snap) => {
             gameState = snap.val();
-            if(!gameState) initServer();
-            else if(!myId) updateSelectionUI();
+            if(!gameState) {
+                const ps = {};
+                Object.keys(TEAM).forEach(k => ps[k] = {x:0, z:0, r:0, s:'LIBERO', lastSeen:0});
+                db.ref('game').set({ players: ps });
+            } else if(!myId) updateSelection();
         });
 
-        function initServer() {
-            const ps = {};
-            Object.keys(TEAM).forEach(k => ps[k] = {x:0, z:0, r:0, s:'LIBERO', lastSeen: 0});
-            db.ref('game').set({ players: ps });
-        }
-
-        function updateSelectionUI() {
+        function updateSelection() {
             const grid = document.getElementById('char-grid');
             grid.innerHTML = Object.keys(TEAM).map(k => {
                 const p = gameState.players[k];
-                // Heartbeat check: se non scrive da 6 secondi, è libero
                 const isOccupied = (p.s === 'OCCUPATO' && (Date.now() - p.lastSeen < 6000));
                 return `
                     <div class="milit-card ${isOccupied ? 'occupied' : ''}" onclick="pick('${k}')">
-                        <div class="text-white font-black text-xl italic uppercase">${TEAM[k].n}</div>
-                        <div class="text-emerald-500 text-[10px] font-bold uppercase tracking-widest">${TEAM[k].role}</div>
-                        <div class="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black ${isOccupied ? 'text-red-500' : 'text-emerald-500'}">
-                            ${isOccupied ? '[ ONLINE ]' : '[ STANDBY ]'}
+                        <div class="flex justify-between items-center">
+                            <span class="text-white font-black uppercase text-lg">${TEAM[k].n}</span>
+                            <span class="text-[9px] font-bold ${isOccupied ? 'text-red-500' : 'text-emerald-500'}">
+                                ${isOccupied ? '[ ONLINE ]' : '[ STANDBY ]'}
+                            </span>
                         </div>
                     </div>
                 `;
@@ -239,27 +248,12 @@
         function pick(id) {
             myId = id;
             db.ref(`game/players/${id}`).update({ s: 'OCCUPATO', lastSeen: Date.now() });
-            
-            // Inizia Heartbeat: Scrive ogni 2 secondi che sei ancora qui
-            setInterval(() => {
-                db.ref(`game/players/${myId}/lastSeen`).set(Date.now());
-            }, 2000);
-
+            setInterval(() => db.ref(`game/players/${myId}/lastSeen`).set(Date.now()), 2000);
             document.getElementById('selection-screen').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
-            document.getElementById('p-name').innerText = "OPERATIVO: " + TEAM[id].n;
+            document.getElementById('p-name').innerText = "UNIT: " + TEAM[id].n;
             init3D();
         }
-
-        function syncToFirebase() {
-            db.ref(`game/players/${myId}`).update({
-                x: charMeshes[myId].position.x,
-                z: charMeshes[myId].position.z,
-                r: charMeshes[myId].rotation.y
-            });
-        }
-
-        function vittoria() { location.reload(); }
 
         window.onresize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
