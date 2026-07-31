@@ -3,38 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRYOPUNK: THE VOID SHIP</title>
+    <title>CRYOPUNK: STARSHIP FOUNDATION</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        body { margin: 0; background-color: #050505; overflow: hidden; font-family: 'Orbitron', sans-serif; }
         canvas { display: block; }
-        .selection-screen { position: fixed; inset: 0; z-index: 100; background: radial-gradient(circle, #1a1a1a 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .btn-char { width: 300px; padding: 20px; margin: 10px; background: rgba(0,255,255,0.05); border: 1px solid #0ff; color: #0ff; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
-        .btn-char:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
-        .hud { position: absolute; top: 20px; left: 20px; z-index: 10; color: #0ff; pointer-events: none; border-left: 3px solid #0ff; padding-left: 15px; display: none; }
-        .controls-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 10px; }
+        .selection-screen { position: fixed; inset: 0; z-index: 100; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border: 5px solid #111; }
+        .btn-char { width: 280px; padding: 20px; margin: 10px; background: #111; border: 2px solid #0ff; color: #0ff; cursor: pointer; text-align: center; font-weight: bold; }
+        .btn-char:hover { background: #0ff; color: #000; }
+        .hud { position: absolute; top: 20px; left: 20px; z-index: 10; color: #0ff; pointer-events: none; background: rgba(0,0,0,0.5); padding: 10px; border-left: 3px solid #0ff; display: none; }
+        .d-pad { position: fixed; bottom: 30px; left: 30px; display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; z-index: 20; }
+        .btn-ctrl { width: 60px; height: 60px; background: rgba(0,255,255,0.1); border: 1px solid #0ff; color: #0ff; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 10px; pointer-events: auto; }
     </style>
 </head>
 <body>
 
     <div id="selection-screen" class="selection-screen">
-        <h1 style="font-size: 3rem; text-shadow: 0 0 20px #0ff;">CRYOPUNK</h1>
-        <p style="color: #666; margin-bottom: 30px;">STAZIONE ORBITALE // SELEZIONE OPERATORE</p>
-        <div class="btn-char" onclick="pick('dave')">Operativo DAVE (Scout)</div>
-        <div class="btn-char" onclick="pick('ivan')">Operativo IVAN (Tank)</div>
-        <div class="btn-char" onclick="pick('jonny')">Operativo JONNY (Hacker)</div>
+        <h1 style="letter-spacing: 10px; font-size: 2rem;">CRYOPUNK</h1>
+        <p style="color: #444; font-size: 10px; margin-bottom: 30px;">RECLUTAMENTO OPERATIVI IN CORSO...</p>
+        <div class="btn-char" onclick="pick('dave')">DAVE-RIG (CYBER)</div>
+        <div class="btn-char" onclick="pick('ivan')">IVAN-VST (HEAVY)</div>
+        <div class="btn-char" onclick="pick('jonny')">JONNY-DRK (HACKER)</div>
     </div>
 
     <div id="game-ui" class="hud">
-        <div id="p-name" style="font-weight: 900;">UNIT: ---</div>
-        <div style="font-size: 10px; opacity: 0.7;">POSIZIONE: PONTE DI COMANDO</div>
+        <div id="p-name">OPERATIVO ATTIVO</div>
+        <div style="font-size: 9px; opacity: 0.8;">SISTEMA: HANGAR ASTRONAVE</div>
     </div>
 
-    <div class="controls-hint">USA WASD PER MUOVERTI // MOUSE PER RUOTARE</div>
+    <div id="controls" class="d-pad" style="display:none;">
+        <div></div><button class="btn-ctrl" id="up">W</button><div></div>
+        <button class="btn-ctrl" id="left">A</button>
+        <button class="btn-ctrl" id="down">S</button>
+        <button class="btn-ctrl" id="right">D</button>
+    </div>
 
     <script>
         // CONFIGURAZIONE FIREBASE
@@ -49,136 +54,108 @@
         let scene, camera, renderer, clock = new THREE.Clock();
         let myId, myMesh, otherPlayers = {}, input = {up:false, down:false, left:false, right:false};
 
-        function init() {
+        function initScene() {
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.05);
+            scene.background = new THREE.Color(0x020202);
+            scene.fog = new THREE.Fog(0x020202, 10, 150);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
+            camera.position.set(0, 10, 20);
+
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // ILLUMINAZIONE REALISTICA
-            const ambient = new THREE.AmbientLight(0x404040, 0.5);
+            // LUCE GLOBALE (Fondamentale per non avere nero)
+            const ambient = new THREE.AmbientLight(0xffffff, 1.2); 
             scene.add(ambient);
+            
+            const sun = new THREE.DirectionalLight(0x00ffff, 0.8);
+            sun.position.set(5, 20, 10);
+            scene.add(sun);
 
-            // COSTRUZIONE ASTRONAVE (Corridoio modulare)
-            createStarship();
+            // ARREDAMENTO ASTRONAVE (Hangar)
+            createEnvironment();
 
-            window.addEventListener('resize', onResize);
             setupControls();
             animate();
         }
 
-        function createStarship() {
-            // Pavimento metallico
-            const floorGeo = new THREE.PlaneGeometry(20, 200);
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x111111, metalness: 0.9, roughness: 0.1 
-            });
+        function createEnvironment() {
+            // Pavimento Hangar (Grande griglia metallica)
+            const floorGeo = new THREE.PlaneGeometry(200, 200);
+            const floorMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
 
-            // Pareti con pannelli e luci neon
-            for (let z = -100; z < 100; z += 10) {
-                // Pannello Parete Sinistra
-                addWallPanel(-10, z, true);
-                // Pannello Parete Destra
-                addWallPanel(10, z, false);
-                
-                // Luce Neon Blu
-                const light = new THREE.PointLight(0x00ffff, 1, 15);
-                light.position.set(z % 20 === 0 ? -9 : 9, 3, z);
-                scene.add(light);
+            const grid = new THREE.GridHelper(200, 40, 0x00ffff, 0x222222);
+            scene.add(grid);
+
+            // Pareti Laterali (Moduli astronave)
+            for(let i = -100; i < 100; i += 20) {
+                const wallL = new THREE.Mesh(new THREE.BoxGeometry(2, 15, 18), new THREE.MeshLambertMaterial({color: 0x151515}));
+                wallL.position.set(-15, 7.5, i);
+                scene.add(wallL);
+
+                const wallR = wallL.clone();
+                wallR.position.x = 15;
+                scene.add(wallR);
+
+                // Luci neon alle pareti
+                const neon = new THREE.PointLight(0x00ffff, 1, 20);
+                neon.position.set(0, 10, i);
+                scene.add(neon);
             }
         }
 
-        function addWallPanel(x, z, left) {
-            const wall = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 8, 10),
-                new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1, roughness: 0.3 })
-            );
-            wall.position.set(x, 4, z);
-            scene.add(wall);
-
-            // Striscia Neon
-            const neon = new THREE.Mesh(
-                new THREE.BoxGeometry(0.1, 4, 0.2),
-                new THREE.MeshBasicMaterial({ color: 0x00ffff })
-            );
-            neon.position.set(left ? x + 0.3 : x - 0.3, 4, z);
-            scene.add(neon);
-        }
-
         function createHumanoid(type) {
-            const colors = { dave: 0x00ffff, ivan: 0xff4400, jonny: 0xff00ff };
+            const colors = { dave: 0x00ffff, ivan: 0xff4400, jonny: 0xcc00ff };
+            const color = colors[type] || 0xffffff;
             const group = new THREE.Group();
 
-            // Materiale tuta spaziale
-            const suitMat = new THREE.MeshStandardMaterial({ color: colors[type], metalness: 0.8, roughness: 0.2 });
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            // GAMBE
+            const legGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+            const legMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+            const lLeg = new THREE.Mesh(legGeo, legMat); lLeg.position.set(-0.3, 0.6, 0); group.add(lLeg);
+            const rLeg = new THREE.Mesh(legGeo, legMat); rLeg.position.set(0.3, 0.6, 0); group.add(rLeg);
 
-            // Gambe
-            const legGeo = new THREE.CapsuleGeometry(0.15, 0.6, 4, 8);
-            const lLeg = new THREE.Mesh(legGeo, suitMat);
-            lLeg.position.set(-0.25, 0.4, 0);
-            group.add(lLeg);
-            const rLeg = new THREE.Mesh(legGeo, suitMat);
-            rLeg.position.set(0.25, 0.4, 0);
-            group.add(rLeg);
+            // BUSTO (Forma umana)
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 0.6), new THREE.MeshLambertMaterial({color: color}));
+            body.position.y = 1.95;
+            group.add(body);
 
-            // Tronco (Forma a V)
-            const torso = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.4, 0.25, 1, 8),
-                suitMat
-            );
-            torso.position.y = 1.3;
-            group.add(torso);
-
-            // Braccia
-            const armGeo = new THREE.CapsuleGeometry(0.1, 0.5, 4, 8);
-            const lArm = new THREE.Mesh(armGeo, suitMat);
-            lArm.position.set(-0.5, 1.5, 0);
-            lArm.rotation.z = 0.2;
-            group.add(lArm);
-            const rArm = new THREE.Mesh(armGeo, suitMat);
-            rArm.position.set(0.5, 1.5, 0);
-            rArm.rotation.z = -0.2;
-            group.add(rArm);
-
-            // Testa + Casco
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), skinMat);
-            head.position.y = 2.1;
+            // TESTA / CASCO
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshLambertMaterial({color: 0x111111}));
+            head.position.y = 3;
             group.add(head);
 
-            const helmet = new THREE.Mesh(
-                new THREE.SphereGeometry(0.3, 16, 16, 0, Math.PI * 2, 0, Math.PI/2),
-                new THREE.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.7, metalness: 1 })
-            );
-            helmet.position.y = 2.1;
-            group.add(helmet);
+            // VISIERA ILLUMINATA
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.1), new THREE.MeshBasicMaterial({color: color}));
+            visor.position.set(0, 3.1, -0.3);
+            group.add(visor);
 
             scene.add(group);
             return group;
         }
 
         function setupControls() {
-            window.onkeydown = (e) => {
-                if(e.key.toLowerCase()==='w') input.up=true;
-                if(e.key.toLowerCase()==='s') input.down=true;
-                if(e.key.toLowerCase()==='a') input.left=true;
-                if(e.key.toLowerCase()==='d') input.right=true;
+            const handle = (e, state) => {
+                const k = e.key ? e.key.toLowerCase() : "";
+                if(k === 'w' || e.target.id === 'up') input.up = state;
+                if(k === 's' || e.target.id === 'down') input.down = state;
+                if(k === 'a' || e.target.id === 'left') input.left = state;
+                if(k === 'd' || e.target.id === 'right') input.right = state;
             };
-            window.onkeyup = (e) => {
-                if(e.key.toLowerCase()==='w') input.up=false;
-                if(e.key.toLowerCase()==='s') input.down=false;
-                if(e.key.toLowerCase()==='a') input.left=false;
-                if(e.key.toLowerCase()==='d') input.right=false;
-            };
+            window.onkeydown = (e) => handle(e, true);
+            window.onkeyup = (e) => handle(e, false);
+            
+            ['up','down','left','right'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.onpointerdown = (e) => handle(e, true);
+                btn.onpointerup = (e) => handle(e, false);
+            });
         }
 
         function animate() {
@@ -186,28 +163,28 @@
             const dt = clock.getDelta();
 
             if (myMesh) {
-                const speed = 10 * dt;
-                const rotSpeed = 3 * dt;
+                const moveSpeed = 12 * dt;
+                const turnSpeed = 3.5 * dt;
 
-                if (input.up) myMesh.translateZ(-speed);
-                if (input.down) myMesh.translateZ(speed);
-                if (input.left) myMesh.rotation.y += rotSpeed;
-                if (input.right) myMesh.rotation.y -= rotSpeed;
+                if (input.up) myMesh.translateZ(-moveSpeed);
+                if (input.down) myMesh.translateZ(moveSpeed);
+                if (input.left) myMesh.rotation.y += turnSpeed;
+                if (input.right) myMesh.rotation.y -= turnSpeed;
 
-                // Sync Firebase
-                if (Math.random() > 0.7) {
+                // Sync Database (limitato per performance)
+                if (Math.random() > 0.8) {
                     db.ref(`game/players/${myId}`).update({
                         x: myMesh.position.x, z: myMesh.position.z, r: myMesh.rotation.y
                     });
                 }
 
-                // Terza persona fluida
-                const camOffset = new THREE.Vector3(0, 5, 8).applyMatrix4(myMesh.matrixWorld);
-                camera.position.lerp(camOffset, 0.1);
-                camera.lookAt(myMesh.position.x, 2, myMesh.position.z);
+                // Camera in terza persona fluida
+                const targetCam = new THREE.Vector3(0, 8, 15).applyMatrix4(myMesh.matrixWorld);
+                camera.position.lerp(targetCam, 0.1);
+                camera.lookAt(myMesh.position.x, 3, myMesh.position.z);
             }
 
-            // Update altri giocatori
+            // Altri Operativi
             Object.keys(otherPlayers).forEach(id => {
                 const p = otherPlayers[id];
                 if (p.target) {
@@ -221,18 +198,20 @@
         }
 
         function pick(type) {
-            myId = type + "_" + Math.floor(Math.random()*1000);
+            myId = type + "_" + Math.floor(Math.random()*9999);
             document.getElementById('selection-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('controls').style.display = 'grid';
             document.getElementById('p-name').innerText = "OPERATIVO: " + type.toUpperCase();
 
-            init();
+            initScene();
             myMesh = createHumanoid(type);
 
-            // Network
+            // Database INIT
             db.ref(`game/players/${myId}`).set({ type: type, x: 0, z: 0, r: 0 });
             db.ref(`game/players/${myId}`).onDisconnect().remove();
 
+            // Database LISTEN
             db.ref('game/players').on('value', (snap) => {
                 const data = snap.val() || {};
                 Object.keys(data).forEach(id => {
@@ -240,14 +219,17 @@
                     if (!otherPlayers[id]) otherPlayers[id] = createHumanoid(data[id].type);
                     otherPlayers[id].target = { x: data[id].x, z: data[id].z, r: data[id].r };
                 });
+                Object.keys(otherPlayers).forEach(id => {
+                    if(!data[id]) { scene.remove(otherPlayers[id]); delete otherPlayers[id]; }
+                });
             });
         }
 
-        function onResize() {
+        window.onresize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        };
     </script>
 </body>
 </html>
